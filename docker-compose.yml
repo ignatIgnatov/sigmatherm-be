@@ -13,6 +13,18 @@ services:
     networks:
       - app-network
 
+  backend:
+    image: ludogoriesoft/sigmatherm-be
+    container_name: sigmatherm-be-container
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    depends_on:
+      - database
+    networks:
+      - app-network
+
 volumes:
   db_data:
 
