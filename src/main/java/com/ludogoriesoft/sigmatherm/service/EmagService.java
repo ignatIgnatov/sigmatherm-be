@@ -28,8 +28,14 @@ public class EmagService {
       "https://marketplace-api.emag.ro/api-3/product_offer/read";
   private static final String EMAG_HU_URL =
       "https://marketplace-api.emag.hu/api-3/product_offer/read";
+  private static final String BRAND_NAME = "brand_name";
+  private static final String PART_NUMBER = "part_number";
+  private static final String NAME = "name";
+  private static final String AVAILABILITY = "availability";
+  private static final String VALUE = "value";
+  private static final String TOKEN_PREFIX = "Basic ";
 
-  private static final Logger logger = Logger.getLogger(EmagService.class.getName());
+  private static final Logger LOGGER = Logger.getLogger(EmagService.class.getName());
 
   @Value("${emag.api.username}")
   private String username;
@@ -44,61 +50,69 @@ public class EmagService {
   @Scheduled(cron = "0 0 0 * * *")
   public void fetchEmagBgProducts() {
     fetchEmagProducts(EMAG_BG_URL);
+    LOGGER.info("EMAG_BG fetched successfully!");
   }
 
-  @Scheduled(cron = "0 0 0 * * *")
+  @Scheduled(cron = "0 10 0 * * *")
   public void fetchEmagRoProducts() {
     fetchEmagProducts(EMAG_RO_URL);
+    LOGGER.info("EMAG_RO fetched successfully!");
   }
 
-  @Scheduled(cron = "0 0 0 * * *")
+  @Scheduled(cron = "0 20 0 * * *")
   public void fetchEmagHuProducts() {
     fetchEmagProducts(EMAG_HU_URL);
+    LOGGER.info("EMAG_HU fetched successfully!");
   }
 
   private void fetchEmagProducts(String url) {
     EmagResponse response = getEmagResponse(url);
 
     if (response.isIsError()) {
-      logger.warning(response.getMessages().getFirst());
+      LOGGER.warning(response.getMessages().getFirst());
       throw new EmagException(response.getMessages().getFirst());
     }
 
     for (Map<String, Object> result : response.getResults()) {
-      String supplierName = (String) result.get("brand_name");
+      String supplierName = (String) result.get(BRAND_NAME);
       if (supplierName != null) {
         supplierService.createSupplierIfNotExists(supplierName, BigDecimal.ZERO);
       }
 
       Integer availability = getAvailability(result);
-      String productId = (String) result.get("part_number");
+      String productId = (String) result.get(PART_NUMBER);
 
       if ((productId != null) && productService.existsById(productId)) {
         productService.editAvailability(productId, availability);
       } else {
         ProductRequest productRequest =
-            ProductRequest.builder()
-                .id(productId)
-                .name((String) result.get("name"))
-                .supplierName(supplierName)
-                .warehouseAvailability(availability)
-                .shopsAvailability(availability)
-                .build();
+            getProductRequest(result, productId, supplierName, availability);
 
         try {
           productService.createProductInDb(productRequest);
         } catch (ObjectExistsException e) {
-          logger.warning(e.getMessage());
+          LOGGER.warning(e.getMessage());
         }
       }
     }
   }
 
+  private static ProductRequest getProductRequest(
+      Map<String, Object> result, String productId, String supplierName, Integer availability) {
+    return ProductRequest.builder()
+        .id(productId)
+        .name((String) result.get(NAME))
+        .supplierName(supplierName)
+        .warehouseAvailability(availability)
+        .shopsAvailability(availability)
+        .build();
+  }
+
   private static Integer getAvailability(Map<String, Object> result) {
     List<Map<String, Integer>> availabilities =
-        (List<Map<String, Integer>>) result.get("availability");
+        (List<Map<String, Integer>>) result.get(AVAILABILITY);
     Map<String, Integer> availabilityObj = availabilities.getFirst();
-    return availabilityObj.get("value");
+    return availabilityObj.get(VALUE);
   }
 
   private EmagResponse getEmagResponse(String url) {
@@ -119,6 +133,6 @@ public class EmagService {
   private String createBasicAuthHeader() {
     String auth = username + ":" + password;
     byte[] encodedAuth = Base64.getEncoder().encode(auth.getBytes(StandardCharsets.UTF_8));
-    return "Basic " + new String(encodedAuth);
+    return TOKEN_PREFIX + new String(encodedAuth);
   }
 }
