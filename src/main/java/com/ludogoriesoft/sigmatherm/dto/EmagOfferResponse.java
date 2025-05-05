@@ -3,7 +3,7 @@ package com.ludogoriesoft.sigmatherm.dto;
 import java.util.List;
 import java.util.Map;
 
-public class EmagResponse {
+public class EmagOfferResponse {
     private boolean isError;
     private List<String> messages;
     private List<Object> errors;

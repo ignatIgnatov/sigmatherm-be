@@ -1,6 +1,6 @@
 package com.ludogoriesoft.sigmatherm.service;
 
-import com.ludogoriesoft.sigmatherm.dto.EmagResponse;
+import com.ludogoriesoft.sigmatherm.dto.EmagOfferResponse;
 import com.ludogoriesoft.sigmatherm.dto.request.ProductRequest;
 import com.ludogoriesoft.sigmatherm.exception.EmagException;
 import com.ludogoriesoft.sigmatherm.exception.ObjectExistsException;
@@ -66,7 +66,7 @@ public class EmagService {
   }
 
   private void fetchEmagProducts(String url) {
-    EmagResponse response = getEmagResponse(url);
+    EmagOfferResponse response = getEmagResponse(url);
 
     if (response.isIsError()) {
       LOGGER.warning(response.getMessages().getFirst());
@@ -115,11 +115,11 @@ public class EmagService {
     return availabilityObj.get(VALUE);
   }
 
-  private EmagResponse getEmagResponse(String url) {
+  private EmagOfferResponse getEmagResponse(String url) {
     HttpHeaders headers = getHeaders();
     HttpEntity<String> entity = new HttpEntity<>(headers);
-    ResponseEntity<EmagResponse> response =
-        restTemplate.exchange(url, HttpMethod.GET, entity, EmagResponse.class);
+    ResponseEntity<EmagOfferResponse> response =
+        restTemplate.exchange(url, HttpMethod.GET, entity, EmagOfferResponse.class);
     return response.getBody();
   }
 
