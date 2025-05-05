@@ -12,6 +12,8 @@ import lombok.RequiredArgsConstructor;
 import org.modelmapper.ModelMapper;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class ProductService {
@@ -52,8 +54,8 @@ public class ProductService {
 
   public void editAvailability(String id, int availabilityRequest) {
     Product product = findById(id);
-    if (availabilityRequest < product.getWarehouseAvailability()
-        || availabilityRequest < product.getShopsAvailability()) {
+    if (availabilityRequest != product.getWarehouseAvailability()
+        || availabilityRequest != product.getShopsAvailability()) {
       product.setWarehouseAvailability(availabilityRequest);
       product.setShopsAvailability(availabilityRequest);
       productRepository.save(product);
@@ -62,6 +64,12 @@ public class ProductService {
 
   public boolean existsById(String id) {
     return productRepository.existsById(id);
+  }
+
+  public List<ProductResponse> getAllProducts() {
+    return productRepository.findAll().stream()
+        .map(p -> modelMapper.map(p, ProductResponse.class))
+        .toList();
   }
 
   private Product findById(String id) {
