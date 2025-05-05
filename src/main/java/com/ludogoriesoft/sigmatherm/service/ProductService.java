@@ -35,21 +35,7 @@ public class ProductService {
     return modelMapper.map(product, ProductResponse.class);
   }
 
-  public ProductResponse editAvailability(String id, int availabilityRequest) {
-    Product product = findById(id);
-    product.setWarehouseAvailability(availabilityRequest);
-    product.setShopsAvailability(availabilityRequest);
-    productRepository.save(product);
-    return modelMapper.map(product, ProductResponse.class);
-  }
-
-  private Product findById(String id) {
-    return productRepository
-        .findById(id)
-        .orElseThrow(() -> new ObjectNotFoundException("Product with id " + id + " not found"));
-  }
-
-  private Product createProductInDb(ProductRequest productRequest) {
+  public Product createProductInDb(ProductRequest productRequest) {
     Supplier supplier = supplierRepository.findByNameIgnoreCase(productRequest.getSupplierName());
     Product product =
         Product.builder()
@@ -62,6 +48,26 @@ public class ProductService {
             .build();
     productRepository.save(product);
     return product;
+  }
+
+  public void editAvailability(String id, int availabilityRequest) {
+    Product product = findById(id);
+    if (availabilityRequest < product.getWarehouseAvailability()
+        || availabilityRequest < product.getShopsAvailability()) {
+      product.setWarehouseAvailability(availabilityRequest);
+      product.setShopsAvailability(availabilityRequest);
+      productRepository.save(product);
+    }
+  }
+
+  public boolean existsById(String id) {
+    return productRepository.existsById(id);
+  }
+
+  private Product findById(String id) {
+    return productRepository
+        .findById(id)
+        .orElseThrow(() -> new ObjectNotFoundException("Product with id " + id + " not found"));
   }
 
   public void reduceAvailability(String productId, int quantityOrdered) {

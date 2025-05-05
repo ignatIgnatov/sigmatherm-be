@@ -2,9 +2,16 @@ package com.ludogoriesoft.sigmatherm.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 import java.math.BigDecimal;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 @Data
+@Builder
+@AllArgsConstructor
+@NoArgsConstructor
 public class ProductRequest {
     @NotBlank(message = "Product ID is required")
     private String id;

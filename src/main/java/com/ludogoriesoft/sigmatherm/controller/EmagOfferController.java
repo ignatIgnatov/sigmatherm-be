@@ -1,6 +1,7 @@
 package com.ludogoriesoft.sigmatherm.controller;
 
 import com.ludogoriesoft.sigmatherm.service.EmagService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -9,17 +10,26 @@ import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api/emag")
+@RequiredArgsConstructor
 public class EmagOfferController {
 
   private final EmagService emagService;
 
-  public EmagOfferController(EmagService emagService) {
-    this.emagService = emagService;
-  }
-
   @GetMapping("/bg")
   public ResponseEntity<String> getEmagBgOffer() {
     emagService.fetchEmagBgProducts();
-    return new ResponseEntity<>("Success", HttpStatus.OK);
+    return new ResponseEntity<>("Emag fetch success!", HttpStatus.OK);
+  }
+
+  @GetMapping("/ro")
+  public ResponseEntity<String> getEmagRoOffer() {
+    emagService.fetchEmagRoProducts();
+    return new ResponseEntity<>("Emag fetch success!", HttpStatus.OK);
+  }
+
+  @GetMapping("/hu")
+  public ResponseEntity<String> getEmagHuOffer() {
+    emagService.fetchEmagHuProducts();
+    return new ResponseEntity<>("Emag fetch success!", HttpStatus.OK);
   }
 }
