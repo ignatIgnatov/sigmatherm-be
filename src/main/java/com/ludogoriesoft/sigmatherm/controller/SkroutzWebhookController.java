@@ -2,12 +2,17 @@ package com.ludogoriesoft.sigmatherm.controller;
 
 import com.ludogoriesoft.sigmatherm.dto.SkroutzOrderWebhook;
 import com.ludogoriesoft.sigmatherm.entity.enums.EventType;
+import com.ludogoriesoft.sigmatherm.service.ProductService;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/skroutz-orders")
+@RequiredArgsConstructor
 public class SkroutzWebhookController {
+
+  private final ProductService productService;
 
   @PostMapping
   public ResponseEntity<String> receiveOrder(@RequestBody SkroutzOrderWebhook webhook) {
@@ -21,7 +26,16 @@ public class SkroutzWebhookController {
 
     switch (type) {
       case new_order:
-        // обработка на нова поръчка
+        //        webhook
+        //            .getOrder()
+        //            .getOrder_lines()
+        //            .forEach(
+        //                line -> {
+        //                  String productId = line.getShopUid();
+        //                  int orderedQuantity = line.getQuantity();
+        //
+        //                  productService.reduceAvailability(productId, orderedQuantity);
+        //                });
         break;
       case order_updated:
         // обработка на промяна на поръчка

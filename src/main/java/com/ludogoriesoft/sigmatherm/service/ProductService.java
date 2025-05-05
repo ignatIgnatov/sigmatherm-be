@@ -63,4 +63,16 @@ public class ProductService {
     productRepository.save(product);
     return product;
   }
+
+  public void reduceAvailability(String productId, int quantityOrdered) {
+    Product product = findById(productId);
+
+    int newWarehouseAvailability = product.getWarehouseAvailability() - quantityOrdered;
+    int newShopsAvailability = product.getShopsAvailability() - quantityOrdered;
+
+    product.setWarehouseAvailability(Math.max(newWarehouseAvailability, 0));
+    product.setShopsAvailability(Math.max(newShopsAvailability, 0));
+
+    productRepository.save(product);
+  }
 }

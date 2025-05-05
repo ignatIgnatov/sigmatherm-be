@@ -1,5 +1,6 @@
 package com.ludogoriesoft.sigmatherm.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ludogoriesoft.sigmatherm.entity.enums.EventType;
 import lombok.Data;
 
@@ -20,6 +21,8 @@ public class SkroutzOrderWebhook {
 
     @Data
     public static class OrderLine {
+        @JsonProperty("shop_uid")
+        private String shopUid;
         private String product_name;
         private int quantity;
         private BigDecimal unit_price;
