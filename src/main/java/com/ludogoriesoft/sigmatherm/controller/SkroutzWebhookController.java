@@ -8,7 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/skroutz-orders")
+@RequestMapping("/api/skroutz-orders")
 @RequiredArgsConstructor
 public class SkroutzWebhookController {
 
@@ -26,16 +26,16 @@ public class SkroutzWebhookController {
 
     switch (type) {
       case new_order:
-        //        webhook
-        //            .getOrder()
-        //            .getOrder_lines()
-        //            .forEach(
-        //                line -> {
-        //                  String productId = line.getShopUid();
-        //                  int orderedQuantity = line.getQuantity();
-        //
-        //                  productService.reduceAvailability(productId, orderedQuantity);
-        //                });
+//                webhook
+//                    .getOrder()
+//                    .getOrder_lines()
+//                    .forEach(
+//                        line -> {
+//                          String productId = line.getShopUid();
+//                          int orderedQuantity = line.getQuantity();
+//
+//                          productService.reduceAvailability(productId, orderedQuantity);
+//                        });
         break;
       case order_updated:
         // обработка на промяна на поръчка

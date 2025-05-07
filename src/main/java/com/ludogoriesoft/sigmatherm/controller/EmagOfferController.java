@@ -17,19 +17,19 @@ public class EmagOfferController {
 
   @GetMapping("/bg")
   public ResponseEntity<String> getEmagBgOffer() {
-    emagService.fetchEmagBgProducts();
+    emagService.fetchEmagBgOrders();
     return new ResponseEntity<>("Emag fetch success!", HttpStatus.OK);
   }
 
   @GetMapping("/ro")
   public ResponseEntity<String> getEmagRoOffer() {
-    emagService.fetchEmagRoProducts();
+    emagService.fetchEmagRoOrders();
     return new ResponseEntity<>("Emag fetch success!", HttpStatus.OK);
   }
 
   @GetMapping("/hu")
   public ResponseEntity<String> getEmagHuOffer() {
-    emagService.fetchEmagHuProducts();
+    emagService.fetchEmagHuOrders();
     return new ResponseEntity<>("Emag fetch success!", HttpStatus.OK);
   }
 }

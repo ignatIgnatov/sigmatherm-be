@@ -1,20 +1,25 @@
 package com.ludogoriesoft.sigmatherm.service;
 
-import com.ludogoriesoft.sigmatherm.dto.EmagOfferResponse;
-import com.ludogoriesoft.sigmatherm.dto.request.ProductRequest;
+import com.ludogoriesoft.sigmatherm.dto.emag.EmagOrder;
+import com.ludogoriesoft.sigmatherm.dto.emag.EmagOrdersCount;
+import com.ludogoriesoft.sigmatherm.dto.emag.EmagOrdersCountResponse;
+import com.ludogoriesoft.sigmatherm.dto.emag.EmagOrdersResponse;
+import com.ludogoriesoft.sigmatherm.dto.emag.EmagProduct;
 import com.ludogoriesoft.sigmatherm.exception.EmagException;
-import com.ludogoriesoft.sigmatherm.exception.ObjectExistsException;
-import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.List;
-import java.util.Map;
 import java.util.logging.Logger;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
 @Service
@@ -22,18 +27,13 @@ import org.springframework.web.client.RestTemplate;
 public class EmagService {
 
   private static final String AUTHORIZATION = "Authorization";
-  private static final String EMAG_BG_URL =
-      "https://marketplace-api.emag.bg/api-3/product_offer/read";
-  private static final String EMAG_RO_URL =
-      "https://marketplace-api.emag.ro/api-3/product_offer/read";
-  private static final String EMAG_HU_URL =
-      "https://marketplace-api.emag.hu/api-3/product_offer/read";
-  private static final String BRAND_NAME = "brand_name";
-  private static final String PART_NUMBER = "part_number";
-  private static final String NAME = "name";
-  private static final String AVAILABILITY = "availability";
-  private static final String VALUE = "value";
+  private static final String EMAG_BG_URL = "https://marketplace-api.emag.bg/api-3/order";
+  private static final String EMAG_RO_URL = "https://marketplace-api.emag.ro/api-3/order";
+  private static final String EMAG_HU_URL = "https://marketplace-api.emag.hu/api-3/order";
   private static final String TOKEN_PREFIX = "Basic ";
+  private static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
+  private static final String READ = "/read";
+  private static final String COUNT = "/count";
 
   private static final Logger LOGGER = Logger.getLogger(EmagService.class.getName());
 
@@ -44,82 +44,72 @@ public class EmagService {
   private String password;
 
   private final RestTemplate restTemplate;
-  private final SupplierService supplierService;
   private final ProductService productService;
 
   @Scheduled(cron = "0 0 0 * * *")
-  public void fetchEmagBgProducts() {
-    fetchEmagProducts(EMAG_BG_URL);
+  public void fetchEmagBgOrders() {
+    fetchEmagOrders(EMAG_BG_URL);
     LOGGER.info("EMAG_BG fetched successfully!");
   }
 
   @Scheduled(cron = "0 10 0 * * *")
-  public void fetchEmagRoProducts() {
-    fetchEmagProducts(EMAG_RO_URL);
+  public void fetchEmagRoOrders() {
+    fetchEmagOrders(EMAG_RO_URL);
     LOGGER.info("EMAG_RO fetched successfully!");
   }
 
   @Scheduled(cron = "0 20 0 * * *")
-  public void fetchEmagHuProducts() {
-    fetchEmagProducts(EMAG_HU_URL);
+  public void fetchEmagHuOrders() {
+    fetchEmagOrders(EMAG_HU_URL);
     LOGGER.info("EMAG_HU fetched successfully!");
   }
 
-  private void fetchEmagProducts(String url) {
-    EmagOfferResponse response = getEmagResponse(url);
-
-    if (response.isIsError()) {
-      LOGGER.warning(response.getMessages().getFirst());
-      throw new EmagException(response.getMessages().getFirst());
+  private void fetchEmagOrders(String url) {
+    EmagOrdersCountResponse ordersCountResponse = getEmagOrdersCountResponse(url + COUNT);
+    if (ordersCountResponse.isError()) {
+      LOGGER.warning(ordersCountResponse.getMessages().getFirst());
+      throw new EmagException(ordersCountResponse.getMessages().getFirst());
     }
 
-    for (Map<String, Object> result : response.getResults()) {
-      String supplierName = (String) result.get(BRAND_NAME);
-      if (supplierName != null) {
-        supplierService.createSupplierIfNotExists(supplierName, BigDecimal.ZERO);
+    EmagOrdersCount ordersCount = ordersCountResponse.getResults();
+
+    for (int i = 1; i <= ordersCount.getNoOfPages(); i++) {
+      EmagOrdersResponse response = getEmagOrdersResponse(url + READ, i);
+
+      if (response.isError()) {
+        LOGGER.warning(response.getMessages().getFirst());
+        throw new EmagException(response.getMessages().getFirst());
       }
 
-      Integer availability = getAvailability(result);
-      String productId = (String) result.get(PART_NUMBER);
+      List<EmagOrder> orders = response.getResults();
 
-      if ((productId != null) && productService.existsById(productId)) {
-        productService.editAvailability(productId, availability);
-      } else {
-        ProductRequest productRequest =
-            getProductRequest(result, productId, supplierName, availability);
-
-        try {
-          productService.createProductInDb(productRequest);
-        } catch (ObjectExistsException e) {
-          LOGGER.warning(e.getMessage());
+      for (EmagOrder order : orders) {
+        for (EmagProduct product : order.getProducts()) {
+          productService.reduceAvailability(product.getProduct_id(), product.getQuantity());
         }
       }
     }
   }
 
-  private static ProductRequest getProductRequest(
-      Map<String, Object> result, String productId, String supplierName, Integer availability) {
-    return ProductRequest.builder()
-        .id(productId)
-        .name((String) result.get(NAME))
-        .supplierName(supplierName)
-        .warehouseAvailability(availability)
-        .shopsAvailability(availability)
-        .build();
-  }
-
-  private static Integer getAvailability(Map<String, Object> result) {
-    List<Map<String, Integer>> availabilities =
-        (List<Map<String, Integer>>) result.get(AVAILABILITY);
-    Map<String, Integer> availabilityObj = availabilities.getFirst();
-    return availabilityObj.get(VALUE);
-  }
-
-  private EmagOfferResponse getEmagResponse(String url) {
+  private EmagOrdersResponse getEmagOrdersResponse(String url, int page) {
     HttpHeaders headers = getHeaders();
-    HttpEntity<String> entity = new HttpEntity<>(headers);
-    ResponseEntity<EmagOfferResponse> response =
-        restTemplate.exchange(url, HttpMethod.GET, entity, EmagOfferResponse.class);
+
+    MultiValueMap<String, String> body = getOrdersRequestBody(page);
+
+    HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(body, headers);
+
+    ResponseEntity<EmagOrdersResponse> response =
+        restTemplate.postForEntity(url, entity, EmagOrdersResponse.class);
+    return response.getBody();
+  }
+
+  public EmagOrdersCountResponse getEmagOrdersCountResponse(String url) {
+    HttpHeaders headers = getHeaders();
+    MultiValueMap<String, String> body = getOrdersRequestBody(1);
+    HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(body, headers);
+
+    ResponseEntity<EmagOrdersCountResponse> response =
+        restTemplate.postForEntity(url, entity, EmagOrdersCountResponse.class);
     return response.getBody();
   }
 
@@ -134,5 +124,25 @@ public class EmagService {
     String auth = username + ":" + password;
     byte[] encodedAuth = Base64.getEncoder().encode(auth.getBytes(StandardCharsets.UTF_8));
     return TOKEN_PREFIX + new String(encodedAuth);
+  }
+
+  private static MultiValueMap<String, String> getOrdersRequestBody(int page) {
+    MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+
+    LocalDate today = LocalDate.now();
+
+    LocalDateTime startOfDay = today.atStartOfDay();
+    LocalDateTime endOfDay = today.atTime(23, 59, 59);
+
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_TIME_PATTERN);
+
+    String createdAfter = startOfDay.format(formatter);
+    String createdBefore = endOfDay.format(formatter);
+
+    body.add("createdBefore", createdBefore);
+    body.add("createdAfter", createdAfter);
+    body.add("status", "4");
+    body.add("currentPage", String.valueOf(page));
+    return body;
   }
 }

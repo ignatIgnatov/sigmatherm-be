@@ -29,6 +29,5 @@ public class Product {
   private Supplier supplier;
 
   private BigDecimal basePrice;
-  private int warehouseAvailability;
-  private int shopsAvailability;
+  private int availability;
 }
