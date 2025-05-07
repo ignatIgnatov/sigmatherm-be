@@ -2,10 +2,9 @@ package com.ludogoriesoft.sigmatherm.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.ludogoriesoft.sigmatherm.entity.enums.EventType;
-import lombok.Data;
-
 import java.math.BigDecimal;
 import java.util.List;
+import lombok.Data;
 
 @Data
 public class SkroutzOrderWebhook {

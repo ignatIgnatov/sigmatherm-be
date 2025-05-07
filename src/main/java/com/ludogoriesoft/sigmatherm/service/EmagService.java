@@ -27,13 +27,10 @@ import org.springframework.web.client.RestTemplate;
 public class EmagService {
 
   private static final String AUTHORIZATION = "Authorization";
-  private static final String EMAG_BG_URL = "https://marketplace-api.emag.bg/api-3/order";
-  private static final String EMAG_RO_URL = "https://marketplace-api.emag.ro/api-3/order";
-  private static final String EMAG_HU_URL = "https://marketplace-api.emag.hu/api-3/order";
   private static final String TOKEN_PREFIX = "Basic ";
   private static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
-  private static final String READ = "/read";
-  private static final String COUNT = "/count";
+  private static final String READ_PATH = "/read";
+  private static final String COUNT_PATH = "/count";
 
   private static final Logger LOGGER = Logger.getLogger(EmagService.class.getName());
 
@@ -43,29 +40,38 @@ public class EmagService {
   @Value("${emag.api.password}")
   private String password;
 
+  @Value("${emag.api.bg-url}")
+  private String emagBgUrl;
+
+  @Value("${emag.api.ro-url}")
+  private String emagRoUrl;
+
+  @Value("${emag.api.hu-url}")
+  private String emagHuUrl;
+
   private final RestTemplate restTemplate;
   private final ProductService productService;
 
   @Scheduled(cron = "0 0 0 * * *")
   public void fetchEmagBgOrders() {
-    fetchEmagOrders(EMAG_BG_URL);
+    fetchEmagOrders(emagBgUrl);
     LOGGER.info("EMAG_BG fetched successfully!");
   }
 
   @Scheduled(cron = "0 10 0 * * *")
   public void fetchEmagRoOrders() {
-    fetchEmagOrders(EMAG_RO_URL);
+    fetchEmagOrders(emagRoUrl);
     LOGGER.info("EMAG_RO fetched successfully!");
   }
 
   @Scheduled(cron = "0 20 0 * * *")
   public void fetchEmagHuOrders() {
-    fetchEmagOrders(EMAG_HU_URL);
+    fetchEmagOrders(emagHuUrl);
     LOGGER.info("EMAG_HU fetched successfully!");
   }
 
   private void fetchEmagOrders(String url) {
-    EmagOrdersCountResponse ordersCountResponse = getEmagOrdersCountResponse(url + COUNT);
+    EmagOrdersCountResponse ordersCountResponse = getEmagOrdersCountResponse(url + COUNT_PATH);
     if (ordersCountResponse.isError()) {
       LOGGER.warning(ordersCountResponse.getMessages().getFirst());
       throw new EmagException(ordersCountResponse.getMessages().getFirst());
@@ -74,16 +80,14 @@ public class EmagService {
     EmagOrdersCount ordersCount = ordersCountResponse.getResults();
 
     for (int i = 1; i <= ordersCount.getNoOfPages(); i++) {
-      EmagOrdersResponse response = getEmagOrdersResponse(url + READ, i);
+      EmagOrdersResponse response = getEmagOrdersResponse(url + READ_PATH, i);
 
       if (response.isError()) {
         LOGGER.warning(response.getMessages().getFirst());
         throw new EmagException(response.getMessages().getFirst());
       }
 
-      List<EmagOrder> orders = response.getResults();
-
-      for (EmagOrder order : orders) {
+      for (EmagOrder order : response.getResults()) {
         for (EmagProduct product : order.getProducts()) {
           productService.reduceAvailability(product.getProduct_id(), product.getQuantity());
         }
@@ -103,7 +107,7 @@ public class EmagService {
     return response.getBody();
   }
 
-  public EmagOrdersCountResponse getEmagOrdersCountResponse(String url) {
+  private EmagOrdersCountResponse getEmagOrdersCountResponse(String url) {
     HttpHeaders headers = getHeaders();
     MultiValueMap<String, String> body = getOrdersRequestBody(1);
     HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(body, headers);
