@@ -28,6 +28,10 @@ public class Product {
   @JoinColumn(name = "supplier_id")
   private Supplier supplier;
 
+  @ManyToOne
+  @JoinColumn(name = "synchronization_id")
+  private Synchronization synchronization;
+
   private BigDecimal basePrice;
   private int availability;
 }

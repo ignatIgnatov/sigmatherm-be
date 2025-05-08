@@ -11,24 +11,32 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/api/emag")
 @RequiredArgsConstructor
-public class EmagOfferController {
+public class EmagOrdersController {
 
   private final EmagService emagService;
 
   @GetMapping("/bg")
-  public ResponseEntity<String> getEmagBgOffer() {
+  public ResponseEntity<String> getEmagBgOrders() {
     emagService.fetchEmagBgOrders();
     return new ResponseEntity<>("Emag fetch success!", HttpStatus.OK);
   }
 
   @GetMapping("/ro")
-  public ResponseEntity<String> getEmagRoOffer() {
+  public ResponseEntity<String> getEmagRoOrders() {
     emagService.fetchEmagRoOrders();
     return new ResponseEntity<>("Emag fetch success!", HttpStatus.OK);
   }
 
   @GetMapping("/hu")
-  public ResponseEntity<String> getEmagHuOffer() {
+  public ResponseEntity<String> getEmagHuOrders() {
+    emagService.fetchEmagHuOrders();
+    return new ResponseEntity<>("Emag fetch success!", HttpStatus.OK);
+  }
+
+  @GetMapping("all")
+  public ResponseEntity<String> getManualEmagOrdersFetch() {
+    emagService.fetchEmagBgOrders();
+    emagService.fetchEmagRoOrders();
     emagService.fetchEmagHuOrders();
     return new ResponseEntity<>("Emag fetch success!", HttpStatus.OK);
   }

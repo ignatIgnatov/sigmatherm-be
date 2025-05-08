@@ -5,10 +5,13 @@ import com.ludogoriesoft.sigmatherm.dto.emag.EmagOrdersCount;
 import com.ludogoriesoft.sigmatherm.dto.emag.EmagOrdersCountResponse;
 import com.ludogoriesoft.sigmatherm.dto.emag.EmagOrdersResponse;
 import com.ludogoriesoft.sigmatherm.dto.emag.EmagProduct;
+import com.ludogoriesoft.sigmatherm.entity.Synchronization;
+import com.ludogoriesoft.sigmatherm.entity.enums.Platform;
 import com.ludogoriesoft.sigmatherm.exception.EmagException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.List;
@@ -51,27 +54,33 @@ public class EmagService {
 
   private final RestTemplate restTemplate;
   private final ProductService productService;
+  private final SynchronizationService synchronizationService;
 
   @Scheduled(cron = "0 0 0 * * *")
   public void fetchEmagBgOrders() {
-    fetchEmagOrders(emagBgUrl);
-    LOGGER.info("EMAG_BG fetched successfully!");
+    Synchronization lastSync = synchronizationService.getLastSyncByPlatform(Platform.eMagBg);
+    Synchronization currentSync = synchronizationService.createSync(Platform.eMagBg);
+    fetchEmagOrders(emagBgUrl, currentSync, lastSync);
   }
 
-  @Scheduled(cron = "0 10 0 * * *")
+  @Scheduled(cron = "0 3 0 * * *")
   public void fetchEmagRoOrders() {
-    fetchEmagOrders(emagRoUrl);
-    LOGGER.info("EMAG_RO fetched successfully!");
+    Synchronization lastSync = synchronizationService.getLastSyncByPlatform(Platform.eMagRo);
+    Synchronization currentSync = synchronizationService.createSync(Platform.eMagRo);
+    fetchEmagOrders(emagRoUrl, currentSync, lastSync);
   }
 
-  @Scheduled(cron = "0 20 0 * * *")
+  @Scheduled(cron = "0 6 0 * * *")
   public void fetchEmagHuOrders() {
-    fetchEmagOrders(emagHuUrl);
-    LOGGER.info("EMAG_HU fetched successfully!");
+    Synchronization lastSync = synchronizationService.getLastSyncByPlatform(Platform.eMagHu);
+    Synchronization currentSync = synchronizationService.createSync(Platform.eMagHu);
+    fetchEmagOrders(emagHuUrl, currentSync, lastSync);
   }
 
-  private void fetchEmagOrders(String url) {
-    EmagOrdersCountResponse ordersCountResponse = getEmagOrdersCountResponse(url + COUNT_PATH);
+  private void fetchEmagOrders(
+      String url, Synchronization synchronization, Synchronization lastSync) {
+    EmagOrdersCountResponse ordersCountResponse =
+        getEmagOrdersCountResponse(url + COUNT_PATH, lastSync);
     if (ordersCountResponse.isError()) {
       LOGGER.warning(ordersCountResponse.getMessages().getFirst());
       throw new EmagException(ordersCountResponse.getMessages().getFirst());
@@ -80,7 +89,7 @@ public class EmagService {
     EmagOrdersCount ordersCount = ordersCountResponse.getResults();
 
     for (int i = 1; i <= ordersCount.getNoOfPages(); i++) {
-      EmagOrdersResponse response = getEmagOrdersResponse(url + READ_PATH, i);
+      EmagOrdersResponse response = getEmagOrdersResponse(url + READ_PATH, i, lastSync);
 
       if (response.isError()) {
         LOGGER.warning(response.getMessages().getFirst());
@@ -90,15 +99,19 @@ public class EmagService {
       for (EmagOrder order : response.getResults()) {
         for (EmagProduct product : order.getProducts()) {
           productService.reduceAvailability(product.getProduct_id(), product.getQuantity());
+          productService.setSync(product.getProduct_id(), synchronization);
         }
       }
     }
+
+    synchronizationService.setEndDate(synchronization);
+    LOGGER.info(synchronization.getPlatform() + " synchronized successfully!");
   }
 
-  private EmagOrdersResponse getEmagOrdersResponse(String url, int page) {
+  private EmagOrdersResponse getEmagOrdersResponse(String url, int page, Synchronization lastSync) {
     HttpHeaders headers = getHeaders();
 
-    MultiValueMap<String, String> body = getOrdersRequestBody(page);
+    MultiValueMap<String, String> body = getOrdersRequestBody(page, lastSync);
 
     HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(body, headers);
 
@@ -107,9 +120,9 @@ public class EmagService {
     return response.getBody();
   }
 
-  private EmagOrdersCountResponse getEmagOrdersCountResponse(String url) {
+  private EmagOrdersCountResponse getEmagOrdersCountResponse(String url, Synchronization lastSync) {
     HttpHeaders headers = getHeaders();
-    MultiValueMap<String, String> body = getOrdersRequestBody(1);
+    MultiValueMap<String, String> body = getOrdersRequestBody(1, lastSync);
     HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(body, headers);
 
     ResponseEntity<EmagOrdersCountResponse> response =
@@ -130,18 +143,30 @@ public class EmagService {
     return TOKEN_PREFIX + new String(encodedAuth);
   }
 
-  private static MultiValueMap<String, String> getOrdersRequestBody(int page) {
+  private static MultiValueMap<String, String> getOrdersRequestBody(
+      int page, Synchronization lastSync) {
+
     MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
 
-    LocalDate today = LocalDate.now();
+    ZoneId zone = ZoneId.of("Europe/Sofia");
+    LocalDate today = LocalDate.now(zone);
 
-    LocalDateTime startOfDay = today.atStartOfDay();
-    LocalDateTime endOfDay = today.atTime(23, 59, 59);
+    LocalDateTime startTime = today.atStartOfDay();
+    LocalDateTime endTime = today.atTime(23, 59, 59);
 
     DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_TIME_PATTERN);
 
-    String createdAfter = startOfDay.format(formatter);
-    String createdBefore = endOfDay.format(formatter);
+    String createdAfter = startTime.format(formatter);
+    if (lastSync != null) {
+      createdAfter =
+          lastSync
+              .getEndDate()
+              .atZone(ZoneId.systemDefault())
+              .withZoneSameInstant(zone)
+              .toLocalDateTime()
+              .format(formatter);
+    }
+    String createdBefore = endTime.format(formatter);
 
     body.add("createdBefore", createdBefore);
     body.add("createdAfter", createdAfter);
