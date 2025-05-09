@@ -23,10 +23,13 @@ public class ExcelService {
 
   public void importProductOfferFromExcel(InputStream inputStream) throws IOException {
     Workbook workbook = new XSSFWorkbook(inputStream);
-    Sheet sheet = workbook.getSheetAt(0);
+    Sheet sheet = workbook.getSheetAt(2);
 
     for (Row row : sheet) {
-      if (row.getRowNum() == 0) {
+      if (row.getCell(4) == null) {
+        break;
+      }
+      if (row.getRowNum() >= 0 && row.getRowNum() <= 4) {
         continue;
       }
       createProductInDb(row);
@@ -35,15 +38,49 @@ public class ExcelService {
     workbook.close();
   }
 
+  public void importSuppliersFromExcel(InputStream inputStream) throws IOException {
+    Workbook workbook = new XSSFWorkbook(inputStream);
+    Sheet sheet = workbook.getSheetAt(2);
+
+    for (Row row : sheet) {
+      if (row.getCell(4) == null) {
+        break;
+      }
+      if (row.getRowNum() >= 0 && row.getRowNum() <= 4) {
+        continue;
+      }
+      createSupplierInDb(row);
+    }
+
+    workbook.close();
+  }
+
+  private void  createSupplierInDb(Row row) {
+    if (!supplierRepository.existsByNameIgnoreCase(row.getCell(0).getStringCellValue())) {
+      Supplier supplier = new Supplier();
+      supplier.setName(row.getCell(0).getStringCellValue());
+      String marginString = row.getCell(0).getStringCellValue();
+      double margin = Double.parseDouble(marginString);
+      supplier.setPriceMargin(BigDecimal.valueOf(margin));
+      supplierRepository.save(supplier);
+    }
+  }
+
   private void createProductInDb(Row row) {
-    Supplier supplier =
-        supplierRepository.findByNameIgnoreCase(row.getCell(14).getStringCellValue());
-    Product product = new Product();
-    product.setId(row.getCell(1).getStringCellValue());
-    product.setName(row.getCell(2).getStringCellValue());
-    product.setSupplier(supplier);
-    product.setBasePrice(BigDecimal.valueOf(row.getCell(8).getNumericCellValue()));
-    product.setAvailability((int) row.getCell(7).getNumericCellValue());
-    productRepository.save(product);
+    if (!productRepository.existsById(row.getCell(4).getStringCellValue())) {
+      Product product = new Product();
+      product.setId(row.getCell(4).getStringCellValue());
+      product.setName(row.getCell(0).getStringCellValue());
+      String supplierName = row.getCell(2).getStringCellValue();
+      Supplier supplier = supplierRepository.findByNameIgnoreCase(supplierName);
+      product.setSupplier(supplier);
+      String basePrice = row.getCell(7).getStringCellValue();
+      double price = Double.parseDouble(basePrice);
+      product.setBasePrice(BigDecimal.valueOf(price));
+      String availabilityString = row.getCell(15).getStringCellValue();
+      int availability = Integer.parseInt(availabilityString);
+      product.setAvailability(availability);
+      productRepository.save(product);
+    }
   }
 }

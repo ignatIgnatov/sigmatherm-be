@@ -63,14 +63,14 @@ public class EmagService {
     fetchEmagOrders(emagBgUrl, currentSync, lastSync);
   }
 
-  @Scheduled(cron = "0 3 0 * * *")
+  @Scheduled(cron = "0 2 0 * * *")
   public void fetchEmagRoOrders() {
     Synchronization lastSync = synchronizationService.getLastSyncByPlatform(Platform.eMagRo);
     Synchronization currentSync = synchronizationService.createSync(Platform.eMagRo);
     fetchEmagOrders(emagRoUrl, currentSync, lastSync);
   }
 
-  @Scheduled(cron = "0 6 0 * * *")
+  @Scheduled(cron = "0 4 0 * * *")
   public void fetchEmagHuOrders() {
     Synchronization lastSync = synchronizationService.getLastSyncByPlatform(Platform.eMagHu);
     Synchronization currentSync = synchronizationService.createSync(Platform.eMagHu);

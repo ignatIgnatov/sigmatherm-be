@@ -16,15 +16,27 @@ import org.springframework.web.multipart.MultipartFile;
 @RequiredArgsConstructor
 public class ExcelController {
 
-    private final ExcelService excelService;
+  private final ExcelService excelService;
 
-    @PostMapping("/products")
-    public ResponseEntity<String> uploadFile(@RequestParam("file") MultipartFile file) {
-        try {
-            excelService.importProductOfferFromExcel(file.getInputStream());
-            return ResponseEntity.ok("Upload successful");
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error: " + e.getMessage());
-        }
+  @PostMapping("/products")
+  public ResponseEntity<String> uploadProductsFile(@RequestParam("file") MultipartFile file) {
+    try {
+      excelService.importProductOfferFromExcel(file.getInputStream());
+      return ResponseEntity.ok("Upload successful");
+    } catch (IOException e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body("Error: " + e.getMessage());
     }
+  }
+
+  @PostMapping("/suppliers")
+  public ResponseEntity<String> uploadSuppliersFile(@RequestParam("file") MultipartFile file) {
+    try {
+      excelService.importSuppliersFromExcel(file.getInputStream());
+      return ResponseEntity.ok("Upload successful");
+    } catch (IOException e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body("Error: " + e.getMessage());
+    }
+  }
 }
