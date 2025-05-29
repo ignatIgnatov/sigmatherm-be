@@ -25,6 +25,8 @@ services:
       - .env
     depends_on:
       - database
+    volumes:
+      - ./offers:/app/offers
     networks:
       - app-network
 

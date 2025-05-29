@@ -14,7 +14,7 @@ public class SkroutzIpFilter extends OncePerRequestFilter {
 
   private static final Logger logger = Logger.getLogger(SkroutzIpFilter.class.getName());
 
-  private static final String REQUEST_URI = "/skroutz-orders";
+  private static final String REQUEST_URI = "/api/skroutz-orders";
   private static final List<String> ALLOWED_IP_PREFIXES =
       Arrays.asList("185.6.76.", "185.6.77.", "185.6.78.", "185.6.79.", "2a03:e40:");
 

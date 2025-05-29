@@ -15,13 +15,15 @@ public class SkroutzOrderWebhook {
     public static class Order {
         private String code;
         private String created_at;
-        private List<OrderLine> order_lines;
+
+        @JsonProperty("line_items")
+        private List<LineItem> line_items;
     }
 
     @Data
-    public static class OrderLine {
-        @JsonProperty("shop_uid")
-        private String shopUid;
+    public static class LineItem {
+        @JsonProperty("id")
+        private String id;
         private String product_name;
         private int quantity;
         private BigDecimal unit_price;

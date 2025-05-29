@@ -34,4 +34,9 @@ public class Product {
 
   private BigDecimal basePrice;
   private int availability;
+  private String status;
+  private BigDecimal salePrice;
+  private String vatId;
+  private String handlingTime;
+
 }

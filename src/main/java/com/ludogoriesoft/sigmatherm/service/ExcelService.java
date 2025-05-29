@@ -4,9 +4,14 @@ import com.ludogoriesoft.sigmatherm.entity.Product;
 import com.ludogoriesoft.sigmatherm.entity.Supplier;
 import com.ludogoriesoft.sigmatherm.repository.ProductRepository;
 import com.ludogoriesoft.sigmatherm.repository.SupplierRepository;
+
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
+import java.util.List;
+
 import lombok.RequiredArgsConstructor;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -20,6 +25,52 @@ public class ExcelService {
 
   private final ProductRepository productRepository;
   private final SupplierRepository supplierRepository;
+
+  private static final String OFFER_DIR = "/app/offers/";
+
+  private static final String OFFER_FILE = "offer.xlsx";
+
+  public void createExcelOffer(List<Product> products) throws IOException {
+    File directory = new File(OFFER_DIR);
+    if (!directory.exists()) {
+      directory.mkdirs();
+    }
+
+    File offerFile = new File(OFFER_DIR + OFFER_FILE);
+
+    if (offerFile.exists()) {
+      boolean deleted = offerFile.delete();
+      if (!deleted) {
+        throw new IOException("Failed to delete old offer file.");
+      }
+    }
+
+
+    try (Workbook workbook = new XSSFWorkbook()) {
+      Sheet sheet = workbook.createSheet("Offers");
+
+      Row headerRow = sheet.createRow(0);
+      String[] columns = {"id", "status", "sale_price", "vat_id", "handling_time", "stock"};
+      for (int i = 0; i < columns.length; i++) {
+        headerRow.createCell(i).setCellValue(columns[i]);
+      }
+
+      int rowNum = 1;
+      for (Product p : products) {
+        Row row = sheet.createRow(rowNum++);
+        row.createCell(0).setCellValue(p.getId());
+        row.createCell(1).setCellValue(p.getStatus());
+        row.createCell(2).setCellValue(String.valueOf(p.getSalePrice()));
+        row.createCell(3).setCellValue(p.getVatId());
+        row.createCell(4).setCellValue(p.getHandlingTime());
+        row.createCell(5).setCellValue(p.getAvailability());
+      }
+
+      try (FileOutputStream fileOut = new FileOutputStream(offerFile)) {
+        workbook.write(fileOut);
+      }
+    }
+  }
 
   public void importProductOfferFromExcel(InputStream inputStream) throws IOException {
     Workbook workbook = new XSSFWorkbook(inputStream);
@@ -40,13 +91,13 @@ public class ExcelService {
 
   public void importSuppliersFromExcel(InputStream inputStream) throws IOException {
     Workbook workbook = new XSSFWorkbook(inputStream);
-    Sheet sheet = workbook.getSheetAt(2);
+    Sheet sheet = workbook.getSheetAt(0);
 
     for (Row row : sheet) {
-      if (row.getCell(4) == null) {
+      if (row.getCell(0) == null) {
         break;
       }
-      if (row.getRowNum() >= 0 && row.getRowNum() <= 4) {
+      if (row.getRowNum() == 0) {
         continue;
       }
       createSupplierInDb(row);
@@ -59,7 +110,7 @@ public class ExcelService {
     if (!supplierRepository.existsByNameIgnoreCase(row.getCell(0).getStringCellValue())) {
       Supplier supplier = new Supplier();
       supplier.setName(row.getCell(0).getStringCellValue());
-      String marginString = row.getCell(0).getStringCellValue();
+      String marginString = row.getCell(1).getStringCellValue();
       double margin = Double.parseDouble(marginString);
       supplier.setPriceMargin(BigDecimal.valueOf(margin));
       supplierRepository.save(supplier);
