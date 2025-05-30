@@ -63,7 +63,7 @@ public class ExcelService {
         row.createCell(2).setCellValue(String.valueOf(p.getSalePrice()));
         row.createCell(3).setCellValue(p.getVatId());
         row.createCell(4).setCellValue(p.getHandlingTime());
-        row.createCell(5).setCellValue(p.getAvailability());
+        row.createCell(5).setCellValue(p.getStock());
       }
 
       try (FileOutputStream fileOut = new FileOutputStream(offerFile)) {
@@ -130,7 +130,7 @@ public class ExcelService {
       product.setBasePrice(BigDecimal.valueOf(price));
       String availabilityString = row.getCell(15).getStringCellValue();
       int availability = Integer.parseInt(availabilityString);
-      product.setAvailability(availability);
+      product.setStock(availability);
       productRepository.save(product);
     }
   }

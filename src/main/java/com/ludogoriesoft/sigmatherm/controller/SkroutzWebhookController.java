@@ -35,6 +35,7 @@ public class SkroutzWebhookController {
         try {
             SkroutzOrderWebhook webhook = objectMapper.readValue(rawPayload, SkroutzOrderWebhook.class);
             EventType type = webhook.getEvent_type();
+            String state = webhook.getOrder().getState();
 
             if (type == null) {
                 return ResponseEntity.badRequest().body("Invalid or missing event_type");
@@ -42,28 +43,34 @@ public class SkroutzWebhookController {
 
             log.info(LocalDateTime.now() + " ---> Received skroutz webhook type: {}", type);
 
-            switch (type) {
-                case new_order:
-                    webhook.getOrder().getLine_items().forEach(line -> {
-                        String productId = line.getId();
-                        int quantity = line.getQuantity();
-                        log.info("New Order Product ID: " + productId);
-                        log.info("New Order Sale quantity: " + quantity);
-            productService.reduceAvailability(productId, quantity);
-                    });
-                    break;
-                case order_updated:
-                    webhook.getOrder().getLine_items().forEach(line -> {
-                        String productId = line.getId();
-                        int quantity = line.getQuantity();
-                        log.info("Order Update Product ID: " + productId);
-                        log.info("Order Update quantity: " + quantity);
+            //TODO: In which state did the order complete successfully? In our case this is "accepted"...
+            if (state.equalsIgnoreCase("accepted")) {
+                switch (type) {
+                    case new_order:
+                        webhook.getOrder().getLine_items().forEach(line -> {
+                            String productId = line.getId();
+                            int quantity = line.getQuantity();
+                            log.info("New Order Product ID: " + productId);
+                            log.info("New Order Sale quantity: " + quantity);
+                            productService.reduceAvailability(productId, quantity);
+                        });
+                        break;
+                    case order_updated:
+                        webhook.getOrder().getLine_items().forEach(line -> {
+                            String productId = line.getId();
+                            int quantity = line.getQuantity();
+                            log.info("Order Update Product ID: " + productId);
+                            log.info("Order Update quantity: " + quantity);
 //            productService.reduceAvailability(productId, quantity);
-                    });
-                    break;
-                default:
-                    return ResponseEntity.badRequest().body("Unsupported event_type");
+                        });
+                        break;
+                    default:
+                        return ResponseEntity.badRequest().body("Unsupported event_type");
+                }
             }
+
+
+
 
             return ResponseEntity.ok("OK");
 

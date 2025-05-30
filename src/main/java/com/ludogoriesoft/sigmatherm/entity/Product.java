@@ -33,8 +33,8 @@ public class Product {
   private Synchronization synchronization;
 
   private BigDecimal basePrice;
-  private int availability;
-  private String status;
+  private int stock;
+  private String status = "1";
   private BigDecimal salePrice;
   private String vatId;
   private String handlingTime;

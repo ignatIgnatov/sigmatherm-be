@@ -43,10 +43,10 @@ public class ProductService {
     public void reduceAvailability(String productId, int quantityOrdered) {
         Product product = findProductById(productId);
         if (product != null) {
-            int newAvailability = product.getAvailability() - quantityOrdered;
+            int newAvailability = product.getStock() - quantityOrdered;
 
             if (newAvailability >= 0) {
-                product.setAvailability(newAvailability);
+                product.setStock(newAvailability);
                 productRepository.save(product);
                 log.info("Availability reduced for product with id " + productId);
             } else {
@@ -78,7 +78,7 @@ public class ProductService {
                         .name(productRequest.getName())
                         .supplier(supplier)
                         .basePrice(productRequest.getBasePrice())
-                        .availability(productRequest.getWarehouseAvailability())
+                        .stock(productRequest.getWarehouseAvailability())
                         .build();
         productRepository.save(product);
         log.info("Product with ID: " + productRequest.getId() + " created successfully");

@@ -11,6 +11,7 @@ import com.ludogoriesoft.sigmatherm.exception.EmagException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -21,6 +22,9 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -39,6 +43,7 @@ public class EmagService {
     private static final String DATE_TIME_PATTERN = "yyyy-MM-dd HH:mm:ss";
     private static final String READ_PATH = "/read";
     private static final String COUNT_PATH = "/count";
+    private static final String ORDER_URL = "/api-3/order";
 
     @Value("${emag.api.username}")
     private String username;
@@ -63,22 +68,50 @@ public class EmagService {
     public void fetchEmagBgOrders() {
         Synchronization lastSync = synchronizationService.getLastSyncByPlatform(Platform.eMagBg);
         Synchronization currentSync = synchronizationService.createSync(Platform.eMagBg);
-        fetchEmagOrders(emagBgUrl, currentSync, lastSync);
+        fetchEmagOrders(emagBgUrl + ORDER_URL, currentSync, lastSync);
     }
 
     @Scheduled(cron = "0 2 0 * * *")
     public void fetchEmagRoOrders() {
         Synchronization lastSync = synchronizationService.getLastSyncByPlatform(Platform.eMagRo);
         Synchronization currentSync = synchronizationService.createSync(Platform.eMagRo);
-        fetchEmagOrders(emagRoUrl, currentSync, lastSync);
+        fetchEmagOrders(emagRoUrl + ORDER_URL, currentSync, lastSync);
     }
 
     @Scheduled(cron = "0 4 0 * * *")
     public void fetchEmagHuOrders() {
         Synchronization lastSync = synchronizationService.getLastSyncByPlatform(Platform.eMagHu);
         Synchronization currentSync = synchronizationService.createSync(Platform.eMagHu);
-        fetchEmagOrders(emagHuUrl, currentSync, lastSync);
+        fetchEmagOrders(emagHuUrl + ORDER_URL, currentSync, lastSync);
     }
+
+    private void uploadExcelOfferToEmag(String baseUrl) throws IOException {
+        String uploadUrl = baseUrl + "/product-offer/save";
+        File file = new File("/app/offers/offer.xlsx");
+
+        if (!file.exists()) {
+            throw new FileNotFoundException("Excel offer file not found.");
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+        headers.set(AUTHORIZATION, createBasicAuthHeader());
+
+        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+        body.add("file", new FileSystemResource(file));
+
+        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+
+        ResponseEntity<String> response = restTemplate.postForEntity(uploadUrl, requestEntity, String.class);
+
+        if (response.getStatusCode().is2xxSuccessful()) {
+            log.info("Offer Excel file uploaded successfully to eMAG.");
+        } else {
+            log.error("Failed to upload offer file to eMAG: " + response.getStatusCode());
+            throw new IOException("Upload failed with status: " + response.getStatusCode());
+        }
+    }
+
 
     private void fetchEmagOrders(
             String url, Synchronization synchronization, Synchronization lastSync) throws EmagException {

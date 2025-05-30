@@ -14,6 +14,7 @@ public class SkroutzOrderWebhook {
     @Data
     public static class Order {
         private String code;
+        private String state;
         private String created_at;
 
         @JsonProperty("line_items")
