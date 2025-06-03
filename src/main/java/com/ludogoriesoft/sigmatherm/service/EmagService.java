@@ -5,6 +5,9 @@ import com.ludogoriesoft.sigmatherm.dto.emag.EmagOrdersCount;
 import com.ludogoriesoft.sigmatherm.dto.emag.EmagOrdersCountResponse;
 import com.ludogoriesoft.sigmatherm.dto.emag.EmagOrdersResponse;
 import com.ludogoriesoft.sigmatherm.dto.emag.EmagProduct;
+import com.ludogoriesoft.sigmatherm.dto.emag.EmagReturnedOrdersResponse;
+import com.ludogoriesoft.sigmatherm.dto.emag.ResultDto;
+import com.ludogoriesoft.sigmatherm.dto.emag.ReturnedProductDto;
 import com.ludogoriesoft.sigmatherm.entity.Synchronization;
 import com.ludogoriesoft.sigmatherm.entity.enums.Platform;
 import com.ludogoriesoft.sigmatherm.exception.EmagException;
@@ -14,6 +17,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -44,6 +48,7 @@ public class EmagService {
     private static final String READ_PATH = "/read";
     private static final String COUNT_PATH = "/count";
     private static final String ORDER_URL = "/api-3/order";
+    private static final String RETURNED_ORDER_URL = "/api-3/rma/read";
 
     @Value("${emag.api.username}")
     private String username;
@@ -69,6 +74,7 @@ public class EmagService {
         Synchronization lastSync = synchronizationService.getLastSyncByPlatform(Platform.eMagBg);
         Synchronization currentSync = synchronizationService.createSync(Platform.eMagBg);
         fetchEmagOrders(emagBgUrl + ORDER_URL, currentSync, lastSync);
+        fetchReturnedEmagOrders(emagBgUrl + RETURNED_ORDER_URL, lastSync);
     }
 
     @Scheduled(cron = "0 2 0 * * *")
@@ -76,6 +82,7 @@ public class EmagService {
         Synchronization lastSync = synchronizationService.getLastSyncByPlatform(Platform.eMagRo);
         Synchronization currentSync = synchronizationService.createSync(Platform.eMagRo);
         fetchEmagOrders(emagRoUrl + ORDER_URL, currentSync, lastSync);
+        fetchReturnedEmagOrders(emagRoUrl + RETURNED_ORDER_URL, lastSync);
     }
 
     @Scheduled(cron = "0 4 0 * * *")
@@ -83,6 +90,7 @@ public class EmagService {
         Synchronization lastSync = synchronizationService.getLastSyncByPlatform(Platform.eMagHu);
         Synchronization currentSync = synchronizationService.createSync(Platform.eMagHu);
         fetchEmagOrders(emagHuUrl + ORDER_URL, currentSync, lastSync);
+        fetchReturnedEmagOrders(emagHuUrl + RETURNED_ORDER_URL, lastSync);
     }
 
     private void uploadExcelOfferToEmag(String baseUrl) throws IOException {
@@ -112,6 +120,19 @@ public class EmagService {
         }
     }
 
+    private void fetchReturnedEmagOrders(String url, Synchronization lastSync) {
+
+        EmagReturnedOrdersResponse ordersResponse = getEmagReturnedOrdersResponse(url, lastSync);
+
+        for (ResultDto result : ordersResponse.getResults()) {
+            for (ReturnedProductDto product : result.getProducts()) {
+                String productId = product.getProduct_id();
+                int quantity = product.getQuantity();
+                productService.reduceAvailabilityByReturnedProduct(productId, quantity);
+            }
+        }
+    }
+
 
     private void fetchEmagOrders(
             String url, Synchronization synchronization, Synchronization lastSync) throws EmagException {
@@ -134,7 +155,7 @@ public class EmagService {
 
             for (EmagOrder order : response.getResults()) {
                 for (EmagProduct product : order.getProducts()) {
-                    productService.reduceAvailability(product.getProduct_id(), product.getQuantity());
+                    productService.reduceAvailabilityByOrder(product.getProduct_id(), product.getQuantity());
                     productService.setSync(product.getProduct_id(), synchronization);
                 }
             }
@@ -153,6 +174,18 @@ public class EmagService {
 
         ResponseEntity<EmagOrdersResponse> response =
                 restTemplate.postForEntity(url, entity, EmagOrdersResponse.class);
+        return response.getBody();
+    }
+
+    private EmagReturnedOrdersResponse getEmagReturnedOrdersResponse(String url, Synchronization lastSync) {
+        HttpHeaders headers = getHeaders();
+
+        MultiValueMap<String, String> body = getReturnedOrdersRequestBody(lastSync);
+
+        HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(body, headers);
+
+        ResponseEntity<EmagReturnedOrdersResponse> response =
+                restTemplate.exchange(url, HttpMethod.GET, entity, EmagReturnedOrdersResponse.class);
         return response.getBody();
     }
 
@@ -208,6 +241,36 @@ public class EmagService {
         body.add("createdAfter", createdAfter);
         body.add("status", "4");
         body.add("currentPage", String.valueOf(page));
+        return body;
+    }
+
+    private static MultiValueMap<String, String> getReturnedOrdersRequestBody(Synchronization lastSync) {
+
+        MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
+
+        ZoneId zone = ZoneId.of("Europe/Sofia");
+        LocalDate today = LocalDate.now(zone);
+
+        LocalDateTime startTime = today.atStartOfDay();
+        LocalDateTime endTime = today.atTime(23, 59, 59);
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_TIME_PATTERN);
+
+        String createdAfter = startTime.format(formatter);
+        if (lastSync != null) {
+            createdAfter =
+                    lastSync
+                            .getEndDate()
+                            .atZone(ZoneId.systemDefault())
+                            .withZoneSameInstant(zone)
+                            .toLocalDateTime()
+                            .format(formatter);
+        }
+        String createdBefore = endTime.format(formatter);
+
+        body.add("date_end", createdBefore);
+        body.add("date_start", createdAfter);
+        body.add("request_status", "3");
         return body;
     }
 }

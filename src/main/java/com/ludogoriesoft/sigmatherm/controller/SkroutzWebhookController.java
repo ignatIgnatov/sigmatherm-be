@@ -7,13 +7,12 @@ import com.ludogoriesoft.sigmatherm.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-
-import java.time.LocalDateTime;
 
 @Slf4j
 @RestController
@@ -41,42 +40,32 @@ public class SkroutzWebhookController {
                 return ResponseEntity.badRequest().body("Invalid or missing event_type");
             }
 
-            log.info(LocalDateTime.now() + " ---> Received skroutz webhook type: {}", type);
+            log.info("Received Skroutz webhook type: " + type + " and state: " + state);
 
-            //TODO: In which state did the order complete successfully? In our case this is "accepted"...
-            if (state.equalsIgnoreCase("accepted")) {
-                switch (type) {
-                    case new_order:
-                        webhook.getOrder().getLine_items().forEach(line -> {
-                            String productId = line.getId();
-                            int quantity = line.getQuantity();
-                            log.info("New Order Product ID: " + productId);
-                            log.info("New Order Sale quantity: " + quantity);
-                            productService.reduceAvailability(productId, quantity);
-                        });
-                        break;
-                    case order_updated:
-                        webhook.getOrder().getLine_items().forEach(line -> {
-                            String productId = line.getId();
-                            int quantity = line.getQuantity();
-                            log.info("Order Update Product ID: " + productId);
-                            log.info("Order Update quantity: " + quantity);
-//            productService.reduceAvailability(productId, quantity);
-                        });
-                        break;
-                    default:
-                        return ResponseEntity.badRequest().body("Unsupported event_type");
-                }
+            switch (state) {
+                case "accepted":
+                    webhook.getOrder().getLine_items().forEach(line -> {
+                        String productId = line.getId();
+                        int quantity = line.getQuantity();
+                        productService.reduceAvailabilityByOrder(productId, quantity);
+                    });
+                    break;
+                case "returned":
+                    webhook.getOrder().getLine_items().forEach(line -> {
+                        String productId = line.getId();
+                        int quantity = line.getQuantity();
+                        productService.reduceAvailabilityByReturnedProduct(productId, quantity);
+                    });
+                    break;
+                default:
+                    return new ResponseEntity<>("Unsupported order state", HttpStatus.BAD_REQUEST);
             }
-
-
-
 
             return ResponseEntity.ok("OK");
 
         } catch (Exception e) {
             log.error("Error processing Skroutz webhook: ", e);
-            return ResponseEntity.status(500).body("Internal server error");
+            return ResponseEntity.status(500).body("Error processing Skroutz webhook: " + e);
         }
     }
 }

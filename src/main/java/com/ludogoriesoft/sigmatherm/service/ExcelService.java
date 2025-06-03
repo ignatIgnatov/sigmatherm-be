@@ -1,5 +1,6 @@
 package com.ludogoriesoft.sigmatherm.service;
 
+import com.ludogoriesoft.sigmatherm.entity.Price;
 import com.ludogoriesoft.sigmatherm.entity.Product;
 import com.ludogoriesoft.sigmatherm.entity.Supplier;
 import com.ludogoriesoft.sigmatherm.repository.ProductRepository;
@@ -60,7 +61,7 @@ public class ExcelService {
         Row row = sheet.createRow(rowNum++);
         row.createCell(0).setCellValue(p.getId());
         row.createCell(1).setCellValue(p.getStatus());
-        row.createCell(2).setCellValue(String.valueOf(p.getSalePrice()));
+        row.createCell(2).setCellValue(String.valueOf(p.getPrice().getBasePrice()));
         row.createCell(3).setCellValue(p.getVatId());
         row.createCell(4).setCellValue(p.getHandlingTime());
         row.createCell(5).setCellValue(p.getStock());
@@ -126,11 +127,12 @@ public class ExcelService {
       Supplier supplier = supplierRepository.findByNameIgnoreCase(supplierName);
       product.setSupplier(supplier);
       String basePrice = row.getCell(7).getStringCellValue();
-      double price = Double.parseDouble(basePrice);
-      product.setBasePrice(BigDecimal.valueOf(price));
+      product.getPrice().setBasePrice(BigDecimal.valueOf(Double.parseDouble(basePrice)));
       String availabilityString = row.getCell(15).getStringCellValue();
       int availability = Integer.parseInt(availabilityString);
       product.setStock(availability);
+      product.setVatId(row.getCell(12).getStringCellValue());
+      product.setHandlingTime(row.getCell(16).getStringCellValue());
       productRepository.save(product);
     }
   }

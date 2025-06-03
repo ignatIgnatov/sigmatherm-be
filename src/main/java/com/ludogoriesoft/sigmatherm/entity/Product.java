@@ -1,5 +1,6 @@
 package com.ludogoriesoft.sigmatherm.entity;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -7,6 +8,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import java.math.BigDecimal;
 
+import jakarta.persistence.OneToOne;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -32,11 +34,12 @@ public class Product {
   @JoinColumn(name = "synchronization_id")
   private Synchronization synchronization;
 
-  private BigDecimal basePrice;
+  @OneToOne(cascade = CascadeType.ALL)
+  @JoinColumn(name = "price_id", referencedColumnName = "id")
+  private Price price;
+
   private int stock;
   private String status = "1";
-  private BigDecimal salePrice;
   private String vatId;
   private String handlingTime;
-
 }

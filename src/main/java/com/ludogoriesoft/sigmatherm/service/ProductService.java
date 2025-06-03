@@ -2,6 +2,7 @@ package com.ludogoriesoft.sigmatherm.service;
 
 import com.ludogoriesoft.sigmatherm.dto.request.ProductRequest;
 import com.ludogoriesoft.sigmatherm.dto.response.ProductResponse;
+import com.ludogoriesoft.sigmatherm.entity.Price;
 import com.ludogoriesoft.sigmatherm.entity.Product;
 import com.ludogoriesoft.sigmatherm.entity.Supplier;
 import com.ludogoriesoft.sigmatherm.entity.Synchronization;
@@ -40,7 +41,7 @@ public class ProductService {
         return modelMapper.map(product, ProductResponse.class);
     }
 
-    public void reduceAvailability(String productId, int quantityOrdered) {
+    public void reduceAvailabilityByOrder(String productId, int quantityOrdered) {
         Product product = findProductById(productId);
         if (product != null) {
             int newAvailability = product.getStock() - quantityOrdered;
@@ -53,6 +54,19 @@ public class ProductService {
                 //TODO: Not enough stock!
                 log.info("Not enough stock for product with ID: " + productId);
             }
+        } else {
+            log.info("Product with ID: " + productId + " not found");
+        }
+    }
+
+    public void reduceAvailabilityByReturnedProduct(String productId, int quantityReturned) {
+        Product product = findProductById(productId);
+        if (product != null) {
+            int newAvailability = product.getStock() + quantityReturned;
+            product.setStock(newAvailability);
+            productRepository.save(product);
+            log.info("Availability reduced for product with id " + productId);
+
         } else {
             log.info("Product with ID: " + productId + " not found");
         }
@@ -72,12 +86,14 @@ public class ProductService {
 
     private Product createProductInDb(ProductRequest productRequest) {
         Supplier supplier = supplierRepository.findByNameIgnoreCase(productRequest.getSupplierName());
+        Price price = new Price();
+        price.setBasePrice(productRequest.getBasePrice());
         Product product =
                 Product.builder()
                         .id(productRequest.getId())
                         .name(productRequest.getName())
                         .supplier(supplier)
-                        .basePrice(productRequest.getBasePrice())
+                        .price(price)
                         .stock(productRequest.getWarehouseAvailability())
                         .build();
         productRepository.save(product);
