@@ -3,7 +3,7 @@ package com.ludogoriesoft.sigmatherm.dto.emag;
 import lombok.Data;
 
 @Data
-public class ReturnedProductDto {
+public class EmagReturnedProduct {
     private long id;
     private long product_emag_id;
     private String product_id;

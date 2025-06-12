@@ -9,5 +9,5 @@ public class EmagReturnedOrdersResponse {
     private boolean isError;
     private List<String> messages;
     private List<String> errors;
-    private List<ResultDto> results;
+    private List<EmagReturnedResult> results;
 }

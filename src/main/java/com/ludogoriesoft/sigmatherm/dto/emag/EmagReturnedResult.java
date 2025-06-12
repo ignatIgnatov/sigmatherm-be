@@ -5,7 +5,7 @@ import lombok.Data;
 import java.util.List;
 
 @Data
-public class ResultDto {
+public class EmagReturnedResult {
     private int is_full_fbe;
     private long emag_id;
     private String return_parent_id;
@@ -35,7 +35,7 @@ public class ResultDto {
     private int return_type;
     private int return_reason;
     private String date;
-    private List<ReturnedProductDto> products;
+    private List<EmagReturnedProduct> products;
     private Object extra_info;
     private String return_tax_value;
     private String swap;

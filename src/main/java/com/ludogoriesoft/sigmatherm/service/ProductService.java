@@ -84,6 +84,21 @@ public class ProductService {
                 .toList();
     }
 
+    public void setSync(String id, Synchronization synchronization) {
+        Product product = findProductById(id);
+        if (product != null) {
+            product.setSynchronization(synchronization);
+            productRepository.save(product);
+            log.info("Synchronization for product with ID: " + id);
+        } else {
+            log.info("No product found (with ID: " + id + " ) for synchronization");
+        }
+    }
+
+    public List<Product> getAllProductsSynchronizedToday() {
+        return productRepository.findAllProductsSynchronizedToday();
+    }
+
     private Product createProductInDb(ProductRequest productRequest) {
         Supplier supplier = supplierRepository.findByNameIgnoreCase(productRequest.getSupplierName());
         Price price = new Price();
@@ -99,16 +114,5 @@ public class ProductService {
         productRepository.save(product);
         log.info("Product with ID: " + productRequest.getId() + " created successfully");
         return product;
-    }
-
-    public void setSync(String id, Synchronization synchronization) {
-        Product product = findProductById(id);
-        if (product != null) {
-            product.setSynchronization(synchronization);
-            productRepository.save(product);
-            log.info("Synchronization for product with ID: " + id);
-        } else {
-            log.info("No product found (with ID: " + id + " ) for synchronization");
-        }
     }
 }

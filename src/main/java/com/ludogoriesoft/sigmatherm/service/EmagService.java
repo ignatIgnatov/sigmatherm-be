@@ -6,15 +6,15 @@ import com.ludogoriesoft.sigmatherm.dto.emag.EmagOrdersCountResponse;
 import com.ludogoriesoft.sigmatherm.dto.emag.EmagOrdersResponse;
 import com.ludogoriesoft.sigmatherm.dto.emag.EmagProduct;
 import com.ludogoriesoft.sigmatherm.dto.emag.EmagReturnedOrdersResponse;
-import com.ludogoriesoft.sigmatherm.dto.emag.ResultDto;
-import com.ludogoriesoft.sigmatherm.dto.emag.ReturnedProductDto;
+import com.ludogoriesoft.sigmatherm.dto.emag.EmagReturnedProduct;
+import com.ludogoriesoft.sigmatherm.dto.emag.EmagReturnedResult;
+import com.ludogoriesoft.sigmatherm.entity.Product;
 import com.ludogoriesoft.sigmatherm.entity.Synchronization;
 import com.ludogoriesoft.sigmatherm.entity.enums.Platform;
 import com.ludogoriesoft.sigmatherm.exception.EmagException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
@@ -26,16 +26,15 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -48,6 +47,7 @@ public class EmagService {
     private static final String READ_PATH = "/read";
     private static final String COUNT_PATH = "/count";
     private static final String ORDER_URL = "/api-3/order";
+    private static final String UPDATE_STOCK_PATH = "/api-3/offer_stock/";
     private static final String RETURNED_ORDER_URL = "/api-3/rma/read";
 
     @Value("${emag.api.username}")
@@ -93,39 +93,76 @@ public class EmagService {
         fetchReturnedEmagOrders(emagHuUrl + RETURNED_ORDER_URL, lastSync);
     }
 
-    private void uploadExcelOfferToEmag(String baseUrl) throws IOException {
-        String uploadUrl = baseUrl + "/product-offer/save";
-        File file = new File("/app/offers/offer.xlsx");
+    @Scheduled(cron = "0 6 0 * * *")
+    public void updateEmagStock() {
+        List<Product> products = productService.getAllProductsSynchronizedToday();
 
-        if (!file.exists()) {
-            throw new FileNotFoundException("Excel offer file not found.");
-        }
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
-        headers.set(AUTHORIZATION, createBasicAuthHeader());
-
-        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-        body.add("file", new FileSystemResource(file));
-
-        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
-
-        ResponseEntity<String> response = restTemplate.postForEntity(uploadUrl, requestEntity, String.class);
-
-        if (response.getStatusCode().is2xxSuccessful()) {
-            log.info("Offer Excel file uploaded successfully to eMAG.");
-        } else {
-            log.error("Failed to upload offer file to eMAG: " + response.getStatusCode());
-            throw new IOException("Upload failed with status: " + response.getStatusCode());
+        for (Product product : products) {
+            uploadActualStockToEmag(emagBgUrl, product.getId(), product.getStock());
+            uploadActualStockToEmag(emagRoUrl, product.getId(), product.getStock());
+            uploadActualStockToEmag(emagHuUrl, product.getId(), product.getStock());
         }
     }
+
+    private void uploadActualStockToEmag(String url, String productId, int stock) {
+        HttpHeaders headers = getHeaders();
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("stock", stock);
+
+        HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                url + UPDATE_STOCK_PATH + productId,
+                HttpMethod.PATCH,
+                request,
+                String.class
+        );
+
+        if (response.getStatusCode().is2xxSuccessful()) {
+            String emagNationality = url.substring(url.length() - 3);
+            switch (emagNationality) {
+                case ".bg" -> log.info("Emag BG updated successfully!");
+                case ".ro" -> log.info("Emag RO updated successfully!");
+                case ".hu" -> log.info("Emag HU updated successfully!");
+                default -> log.info("Emag updated successfully!");
+            }
+        }
+    }
+
+//    private void uploadExcelOfferToEmag(String baseUrl) throws IOException {
+//        String uploadUrl = baseUrl + "/product-offer/save";
+//        File file = new File("/app/offers/offer.xlsx");
+//
+//        if (!file.exists()) {
+//            throw new FileNotFoundException("Excel offer file not found.");
+//        }
+//
+//        HttpHeaders headers = new HttpHeaders();
+//        headers.setContentType(MediaType.MULTIPART_FORM_DATA);
+//        headers.set(AUTHORIZATION, createBasicAuthHeader());
+//
+//        MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
+//        body.add("file", new FileSystemResource(file));
+//
+//        HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
+//
+//        ResponseEntity<String> response = restTemplate.postForEntity(uploadUrl, requestEntity, String.class);
+//
+//        if (response.getStatusCode().is2xxSuccessful()) {
+//            log.info("Offer Excel file uploaded successfully to eMAG.");
+//        } else {
+//            log.error("Failed to upload offer file to eMAG: " + response.getStatusCode());
+//            throw new IOException("Upload failed with status: " + response.getStatusCode());
+//        }
+//    }
 
     private void fetchReturnedEmagOrders(String url, Synchronization lastSync) {
 
         EmagReturnedOrdersResponse ordersResponse = getEmagReturnedOrdersResponse(url, lastSync);
 
-        for (ResultDto result : ordersResponse.getResults()) {
-            for (ReturnedProductDto product : result.getProducts()) {
+        for (EmagReturnedResult result : ordersResponse.getResults()) {
+            for (EmagReturnedProduct product : result.getProducts()) {
                 String productId = product.getProduct_id();
                 int quantity = product.getQuantity();
                 productService.reduceAvailabilityByReturnedProduct(productId, quantity);
