@@ -1,6 +1,6 @@
 package com.ludogoriesoft.sigmatherm.controller;
 
-import com.ludogoriesoft.sigmatherm.entity.Product;
+import com.ludogoriesoft.sigmatherm.entity.ProductEntity;
 import com.ludogoriesoft.sigmatherm.repository.ProductRepository;
 import com.ludogoriesoft.sigmatherm.service.ExcelService;
 import lombok.RequiredArgsConstructor;
@@ -31,9 +31,9 @@ public class DummyController {
 
     @PostMapping("/create-offer")
     public ResponseEntity<String> createExcelOffer() {
-        List<Product> products = productRepository.findAll();
+        List<ProductEntity> productEntities = productRepository.findAll();
         try {
-            excelService.createExcelOffer(products);
+            excelService.createExcelOffer(productEntities);
             return new ResponseEntity<>("Offer created!", HttpStatus.OK);
         } catch (IOException e) {
             return new ResponseEntity<>("Error: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);

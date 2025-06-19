@@ -3,7 +3,7 @@ package com.ludogoriesoft.sigmatherm.service;
 import com.ludogoriesoft.sigmatherm.dto.request.ProductRequest;
 import com.ludogoriesoft.sigmatherm.dto.response.ProductResponse;
 import com.ludogoriesoft.sigmatherm.entity.Price;
-import com.ludogoriesoft.sigmatherm.entity.Product;
+import com.ludogoriesoft.sigmatherm.entity.ProductEntity;
 import com.ludogoriesoft.sigmatherm.entity.Supplier;
 import com.ludogoriesoft.sigmatherm.entity.Synchronization;
 import com.ludogoriesoft.sigmatherm.exception.ObjectExistsException;
@@ -37,18 +37,18 @@ public class ProductService {
                     "Supplier with name " + productRequest.getSupplierName() + " not found");
         }
 
-        Product product = createProductInDb(productRequest);
-        return modelMapper.map(product, ProductResponse.class);
+        ProductEntity productEntity = createProductInDb(productRequest);
+        return modelMapper.map(productEntity, ProductResponse.class);
     }
 
     public void reduceAvailabilityByOrder(String productId, int quantityOrdered) {
-        Product product = findProductById(productId);
-        if (product != null) {
-            int newAvailability = product.getStock() - quantityOrdered;
+        ProductEntity productEntity = findProductById(productId);
+        if (productEntity != null) {
+            int newAvailability = productEntity.getStock() - quantityOrdered;
 
             if (newAvailability >= 0) {
-                product.setStock(newAvailability);
-                productRepository.save(product);
+                productEntity.setStock(newAvailability);
+                productRepository.save(productEntity);
                 log.info("Availability reduced for product with id " + productId);
             } else {
                 //TODO: Not enough stock!
@@ -60,11 +60,11 @@ public class ProductService {
     }
 
     public void reduceAvailabilityByReturnedProduct(String productId, int quantityReturned) {
-        Product product = findProductById(productId);
-        if (product != null) {
-            int newAvailability = product.getStock() + quantityReturned;
-            product.setStock(newAvailability);
-            productRepository.save(product);
+        ProductEntity productEntity = findProductById(productId);
+        if (productEntity != null) {
+            int newAvailability = productEntity.getStock() + quantityReturned;
+            productEntity.setStock(newAvailability);
+            productRepository.save(productEntity);
             log.info("Availability reduced for product with id " + productId);
 
         } else {
@@ -72,7 +72,7 @@ public class ProductService {
         }
     }
 
-    private Product findProductById(String id) {
+    public ProductEntity findProductById(String id) {
         return productRepository
                 .findById(id)
                 .orElse(null);
@@ -85,34 +85,34 @@ public class ProductService {
     }
 
     public void setSync(String id, Synchronization synchronization) {
-        Product product = findProductById(id);
-        if (product != null) {
-            product.setSynchronization(synchronization);
-            productRepository.save(product);
+        ProductEntity productEntity = findProductById(id);
+        if (productEntity != null) {
+            productEntity.setSynchronization(synchronization);
+            productRepository.save(productEntity);
             log.info("Synchronization for product with ID: " + id);
         } else {
             log.info("No product found (with ID: " + id + " ) for synchronization");
         }
     }
 
-    public List<Product> getAllProductsSynchronizedToday() {
+    public List<ProductEntity> getAllProductsSynchronizedToday() {
         return productRepository.findAllProductsSynchronizedToday();
     }
 
-    private Product createProductInDb(ProductRequest productRequest) {
+    private ProductEntity createProductInDb(ProductRequest productRequest) {
         Supplier supplier = supplierRepository.findByNameIgnoreCase(productRequest.getSupplierName());
         Price price = new Price();
         price.setBasePrice(productRequest.getBasePrice());
-        Product product =
-                Product.builder()
+        ProductEntity productEntity =
+                ProductEntity.builder()
                         .id(productRequest.getId())
                         .name(productRequest.getName())
                         .supplier(supplier)
                         .price(price)
                         .stock(productRequest.getWarehouseAvailability())
                         .build();
-        productRepository.save(product);
+        productRepository.save(productEntity);
         log.info("Product with ID: " + productRequest.getId() + " created successfully");
-        return product;
+        return productEntity;
     }
 }

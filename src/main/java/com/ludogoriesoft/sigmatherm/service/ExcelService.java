@@ -1,7 +1,6 @@
 package com.ludogoriesoft.sigmatherm.service;
 
-import com.ludogoriesoft.sigmatherm.entity.Price;
-import com.ludogoriesoft.sigmatherm.entity.Product;
+import com.ludogoriesoft.sigmatherm.entity.ProductEntity;
 import com.ludogoriesoft.sigmatherm.entity.Supplier;
 import com.ludogoriesoft.sigmatherm.repository.ProductRepository;
 import com.ludogoriesoft.sigmatherm.repository.SupplierRepository;
@@ -31,7 +30,7 @@ public class ExcelService {
 
   private static final String OFFER_FILE = "offer.xlsx";
 
-  public void createExcelOffer(List<Product> products) throws IOException {
+  public void createExcelOffer(List<ProductEntity> productEntities) throws IOException {
     File directory = new File(OFFER_DIR);
     if (!directory.exists()) {
       directory.mkdirs();
@@ -57,7 +56,7 @@ public class ExcelService {
       }
 
       int rowNum = 1;
-      for (Product p : products) {
+      for (ProductEntity p : productEntities) {
         Row row = sheet.createRow(rowNum++);
         row.createCell(0).setCellValue(p.getId());
         row.createCell(1).setCellValue(p.getStatus());
@@ -120,20 +119,20 @@ public class ExcelService {
 
   private void createProductInDb(Row row) {
     if (!productRepository.existsById(row.getCell(4).getStringCellValue())) {
-      Product product = new Product();
-      product.setId(row.getCell(4).getStringCellValue());
-      product.setName(row.getCell(0).getStringCellValue());
+      ProductEntity productEntity = new ProductEntity();
+      productEntity.setId(row.getCell(4).getStringCellValue());
+      productEntity.setName(row.getCell(0).getStringCellValue());
       String supplierName = row.getCell(2).getStringCellValue();
       Supplier supplier = supplierRepository.findByNameIgnoreCase(supplierName);
-      product.setSupplier(supplier);
+      productEntity.setSupplier(supplier);
       String basePrice = row.getCell(7).getStringCellValue();
-      product.getPrice().setBasePrice(BigDecimal.valueOf(Double.parseDouble(basePrice)));
+      productEntity.getPrice().setBasePrice(BigDecimal.valueOf(Double.parseDouble(basePrice)));
       String availabilityString = row.getCell(15).getStringCellValue();
       int availability = Integer.parseInt(availabilityString);
-      product.setStock(availability);
-      product.setVatId(row.getCell(12).getStringCellValue());
-      product.setHandlingTime(row.getCell(16).getStringCellValue());
-      productRepository.save(product);
+      productEntity.setStock(availability);
+      productEntity.setVatId(row.getCell(12).getStringCellValue());
+      productEntity.setHandlingTime(row.getCell(16).getStringCellValue());
+      productRepository.save(productEntity);
     }
   }
 }

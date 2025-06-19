@@ -2,8 +2,10 @@ package com.ludogoriesoft.sigmatherm.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ludogoriesoft.sigmatherm.dto.SkroutzOrderWebhook;
+import com.ludogoriesoft.sigmatherm.entity.ProductEntity;
 import com.ludogoriesoft.sigmatherm.entity.enums.EventType;
 import com.ludogoriesoft.sigmatherm.service.ProductService;
+import com.ludogoriesoft.sigmatherm.service.SkroutzFeedService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,6 +16,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.io.File;
+import java.util.List;
+
 @Slf4j
 @RestController
 @RequestMapping("/api/skroutz-orders")
@@ -21,7 +26,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class SkroutzWebhookController {
 
     private final ProductService productService;
+    private final SkroutzFeedService skroutzFeedService;
     private final ObjectMapper objectMapper;
+
+    private static final String FEED_PATH = "/app/feeds/skroutz_feed.xml";
 
     @Value("${skroutz.webhook.secret}")
     private String skroutzSecret;
@@ -48,6 +56,7 @@ public class SkroutzWebhookController {
                         String productId = line.getId();
                         int quantity = line.getQuantity();
                         productService.reduceAvailabilityByOrder(productId, quantity);
+                        updateSkroutzXml(productId);
                     });
                     break;
                 case "returned":
@@ -55,6 +64,7 @@ public class SkroutzWebhookController {
                         String productId = line.getId();
                         int quantity = line.getQuantity();
                         productService.reduceAvailabilityByReturnedProduct(productId, quantity);
+                        updateSkroutzXml(productId);
                     });
                     break;
                 default:
@@ -66,6 +76,15 @@ public class SkroutzWebhookController {
         } catch (Exception e) {
             log.error("Error processing Skroutz webhook: ", e);
             return ResponseEntity.status(500).body("Error processing Skroutz webhook: " + e);
+        }
+    }
+
+    private void updateSkroutzXml(String productId) {
+        ProductEntity product = productService.findProductById(productId);
+        try {
+            skroutzFeedService.updateFeed(new File(FEED_PATH), List.of(product));
+        } catch (Exception e) {
+            log.error("Update feed exception: " + e.getMessage());
         }
     }
 }

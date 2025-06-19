@@ -27,6 +27,7 @@ services:
       - database
     volumes:
       - ./offers:/app/offers
+      - ./feeds:/app/feeds
     networks:
       - app-network
 
