@@ -2,7 +2,7 @@ package com.ludogoriesoft.sigmatherm.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ludogoriesoft.sigmatherm.dto.SkroutzOrderWebhook;
-import com.ludogoriesoft.sigmatherm.entity.ProductEntity;
+import com.ludogoriesoft.sigmatherm.entity.Product;
 import com.ludogoriesoft.sigmatherm.entity.enums.EventType;
 import com.ludogoriesoft.sigmatherm.service.ProductService;
 import com.ludogoriesoft.sigmatherm.service.SkroutzFeedService;
@@ -80,7 +80,7 @@ public class SkroutzWebhookController {
     }
 
     private void updateSkroutzXml(String productId) {
-        ProductEntity product = productService.findProductById(productId);
+        Product product = productService.findProductById(productId);
         try {
             skroutzFeedService.updateFeed(new File(FEED_PATH), List.of(product));
         } catch (Exception e) {

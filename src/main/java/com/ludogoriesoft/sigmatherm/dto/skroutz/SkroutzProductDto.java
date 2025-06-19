@@ -7,7 +7,7 @@ import lombok.Data;
 
 @XmlAccessorType(XmlAccessType.FIELD)
 @Data
-public class Product {
+public class SkroutzProductDto {
     @XmlElement(name = "id")
     private String id;
 

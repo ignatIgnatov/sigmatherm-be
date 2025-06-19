@@ -15,6 +15,6 @@ public class MyWebStore {
 
     @XmlElementWrapper(name = "products")
     @XmlElement(name = "product")
-    private List<Product> products;
+    private List<SkroutzProductDto> products;
 }
 

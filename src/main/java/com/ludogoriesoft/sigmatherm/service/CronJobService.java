@@ -1,6 +1,6 @@
 package com.ludogoriesoft.sigmatherm.service;
 
-import com.ludogoriesoft.sigmatherm.entity.ProductEntity;
+import com.ludogoriesoft.sigmatherm.entity.Product;
 import com.ludogoriesoft.sigmatherm.entity.Synchronization;
 import com.ludogoriesoft.sigmatherm.entity.enums.Platform;
 import lombok.RequiredArgsConstructor;
@@ -59,13 +59,13 @@ public class CronJobService {
 
     @Scheduled(cron = "0 6 0 * * *")
     public void updateStockToStores() throws Exception {
-        List<ProductEntity> products = productService.getAllProductsSynchronizedToday();
+        List<Product> products = productService.getAllProductsSynchronizedToday();
 
         // To Emag stores
-        for (ProductEntity productEntity : products) {
-            emagService.uploadActualStockToEmag(emagBgUrl, productEntity.getId(), productEntity.getStock());
-            emagService.uploadActualStockToEmag(emagRoUrl, productEntity.getId(), productEntity.getStock());
-            emagService.uploadActualStockToEmag(emagHuUrl, productEntity.getId(), productEntity.getStock());
+        for (Product product : products) {
+            emagService.uploadActualStockToEmag(emagBgUrl, product.getId(), product.getStock());
+            emagService.uploadActualStockToEmag(emagRoUrl, product.getId(), product.getStock());
+            emagService.uploadActualStockToEmag(emagHuUrl, product.getId(), product.getStock());
         }
 
         // To Skroutz.gr store

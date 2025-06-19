@@ -19,7 +19,7 @@ public class Price {
     private UUID id;
 
     @OneToOne(mappedBy = "price")
-    private ProductEntity product;
+    private Product product;
 
     private BigDecimal basePrice;
 
