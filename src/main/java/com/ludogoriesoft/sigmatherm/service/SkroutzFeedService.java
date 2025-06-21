@@ -32,7 +32,7 @@ public class SkroutzFeedService {
 
         for (Product p : updatedProducts) {
             store.getProducts().forEach(product -> {
-                if (p.getId().equals(product.getId())) {
+                if (p.getId().equals(product.getMpn())) {
                     product.setQuantity(p.getStock());
                 }
             });

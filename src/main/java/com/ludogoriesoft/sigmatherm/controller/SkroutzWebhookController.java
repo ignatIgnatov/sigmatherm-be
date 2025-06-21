@@ -3,9 +3,12 @@ package com.ludogoriesoft.sigmatherm.controller;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ludogoriesoft.sigmatherm.dto.SkroutzOrderWebhook;
 import com.ludogoriesoft.sigmatherm.entity.Product;
+import com.ludogoriesoft.sigmatherm.entity.Synchronization;
 import com.ludogoriesoft.sigmatherm.entity.enums.EventType;
+import com.ludogoriesoft.sigmatherm.entity.enums.Platform;
 import com.ludogoriesoft.sigmatherm.service.ProductService;
 import com.ludogoriesoft.sigmatherm.service.SkroutzFeedService;
+import com.ludogoriesoft.sigmatherm.service.SynchronizationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +31,7 @@ public class SkroutzWebhookController {
     private final ProductService productService;
     private final SkroutzFeedService skroutzFeedService;
     private final ObjectMapper objectMapper;
+    private final SynchronizationService synchronizationService;
 
     private static final String FEED_PATH = "/app/feeds/skroutz_feed.xml";
 
@@ -55,6 +59,8 @@ public class SkroutzWebhookController {
                     webhook.getOrder().getLine_items().forEach(line -> {
                         String productId = line.getId();
                         int quantity = line.getQuantity();
+                        Synchronization synchronization = synchronizationService.createSync(Platform.Skroutz);
+                        productService.setProductSynchronization(productId, synchronization);
                         productService.reduceAvailabilityByOrder(productId, quantity);
                         updateSkroutzXml(productId);
                     });
@@ -63,6 +69,8 @@ public class SkroutzWebhookController {
                     webhook.getOrder().getLine_items().forEach(line -> {
                         String productId = line.getId();
                         int quantity = line.getQuantity();
+                        Synchronization synchronization = synchronizationService.createSync(Platform.Skroutz);
+                        productService.setProductSynchronization(productId, synchronization);
                         productService.reduceAvailabilityByReturnedProduct(productId, quantity);
                         updateSkroutzXml(productId);
                     });
