@@ -4,6 +4,7 @@ import com.ludogoriesoft.sigmatherm.dto.magento.MagentoProductResponseDto;
 import com.ludogoriesoft.sigmatherm.dto.magento.MagentoProductSalesDto;
 import com.ludogoriesoft.sigmatherm.entity.Synchronization;
 import com.ludogoriesoft.sigmatherm.entity.enums.Platform;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -25,6 +26,7 @@ public class MagentoService {
         return productService.getAllProducts().stream().map(product -> modelMapper.map(product, MagentoProductResponseDto.class)).toList();
     }
 
+    @Transactional
     public ResponseEntity<String> receiveProductSales(List<MagentoProductSalesDto> products) {
         try {
             if (products.isEmpty()) {

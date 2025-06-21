@@ -54,12 +54,13 @@ public class SkroutzWebhookController {
 
             log.info("Received Skroutz webhook type: " + type + " and state: " + state);
 
+            Synchronization synchronization = synchronizationService.createSync(Platform.Skroutz);
+
             switch (state) {
                 case "accepted":
                     webhook.getOrder().getLine_items().forEach(line -> {
                         String productId = line.getId();
                         int quantity = line.getQuantity();
-                        Synchronization synchronization = synchronizationService.createSync(Platform.Skroutz);
                         productService.setProductSynchronization(productId, synchronization);
                         productService.reduceAvailabilityByOrder(productId, quantity);
                         updateSkroutzXml(productId);
@@ -69,7 +70,6 @@ public class SkroutzWebhookController {
                     webhook.getOrder().getLine_items().forEach(line -> {
                         String productId = line.getId();
                         int quantity = line.getQuantity();
-                        Synchronization synchronization = synchronizationService.createSync(Platform.Skroutz);
                         productService.setProductSynchronization(productId, synchronization);
                         productService.reduceAvailabilityByReturnedProduct(productId, quantity);
                         updateSkroutzXml(productId);
