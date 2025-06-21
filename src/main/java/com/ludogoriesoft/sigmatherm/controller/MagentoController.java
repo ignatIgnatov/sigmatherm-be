@@ -3,6 +3,7 @@ package com.ludogoriesoft.sigmatherm.controller;
 import com.ludogoriesoft.sigmatherm.dto.magento.MagentoProductResponseDto;
 import com.ludogoriesoft.sigmatherm.dto.magento.MagentoProductSalesDto;
 import com.ludogoriesoft.sigmatherm.service.MagentoService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -29,7 +30,7 @@ public class MagentoController {
     }
 
     @PostMapping("/sales")
-    public ResponseEntity<String> receiveProductSales(@RequestBody List<MagentoProductSalesDto> products) {
+    public ResponseEntity<String> receiveProductSales(@Valid @RequestBody List<MagentoProductSalesDto> products) {
         return magentoService.receiveProductSales(products);
     }
 }

@@ -19,16 +19,22 @@ public class SecurityConfig {
 
     private static final String SKROUTZ_WEBHOOK_URI = "/api/skroutz-orders";
     private static final String SKROUTZ_FEED_URL = "/api/skroutz/**";
+    private static final String MAGENTO_URL = "/api/magento/**";
 
     @Value("${spring.cors.allowedOrigins}")
     private String[] allowedOrigins;
+
+    @Value("${magento.api-key}")
+    private String magentoApiKey;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.csrf(AbstractHttpConfigurer::disable)
                 .addFilterBefore(skroutzIpFilter(), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(apiKeyAuthFilter(), UsernamePasswordAuthenticationFilter.class)
                 .authorizeHttpRequests(
                         auth -> auth
+                                .requestMatchers(MAGENTO_URL).authenticated()
                                 .requestMatchers(SKROUTZ_WEBHOOK_URI).permitAll()
                                 .requestMatchers(SKROUTZ_FEED_URL).permitAll()
                                 .anyRequest().permitAll())
@@ -61,5 +67,10 @@ public class SecurityConfig {
         source.registerCorsConfiguration(SKROUTZ_WEBHOOK_URI, webhookConfig);
 
         return source;
+    }
+
+    @Bean
+    public ApiKeyAuthFilter apiKeyAuthFilter() {
+        return new ApiKeyAuthFilter("X-API-KEY", magentoApiKey);
     }
 }

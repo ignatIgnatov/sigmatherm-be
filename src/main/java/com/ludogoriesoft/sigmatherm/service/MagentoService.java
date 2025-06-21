@@ -2,6 +2,7 @@ package com.ludogoriesoft.sigmatherm.service;
 
 import com.ludogoriesoft.sigmatherm.dto.magento.MagentoProductResponseDto;
 import com.ludogoriesoft.sigmatherm.dto.magento.MagentoProductSalesDto;
+import com.ludogoriesoft.sigmatherm.entity.Product;
 import com.ludogoriesoft.sigmatherm.entity.Synchronization;
 import com.ludogoriesoft.sigmatherm.entity.enums.Platform;
 import jakarta.transaction.Transactional;
@@ -20,10 +21,12 @@ public class MagentoService {
 
     private final SynchronizationService synchronizationService;
     private final ProductService productService;
-    private final ModelMapper modelMapper;
 
     public List<MagentoProductResponseDto> getAllSyncProducts() {
-        return productService.getAllProducts().stream().map(product -> modelMapper.map(product, MagentoProductResponseDto.class)).toList();
+        return productService.getAllProductsSynchronizedToday()
+                .stream()
+                .map(this::convertToMagentoProductResponseDto)
+                .toList();
     }
 
     @Transactional
@@ -44,5 +47,12 @@ public class MagentoService {
             return ResponseEntity.badRequest().body("Fail to sync the sales");
         }
         return ResponseEntity.ok().body("Product sales received successfully!");
+    }
+
+    private MagentoProductResponseDto convertToMagentoProductResponseDto(Product product) {
+        MagentoProductResponseDto productResponseDto = new MagentoProductResponseDto();
+        productResponseDto.setId(product.getId());
+        productResponseDto.setStock(product.getStock());
+        return productResponseDto;
     }
 }
