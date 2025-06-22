@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Data
 @Builder
@@ -18,4 +19,5 @@ public class ExceptionResponse {
     private LocalDateTime dateTime;
     private HttpStatus status;
     private Integer statusCode;
+    private Map<String, String> validationErrors;
 }

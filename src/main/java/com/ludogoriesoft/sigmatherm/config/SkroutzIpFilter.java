@@ -26,7 +26,6 @@ public class SkroutzIpFilter extends OncePerRequestFilter {
     if (request.getRequestURI().equals(REQUEST_URI)) {
       String remoteIp = getClientIp(request);
 
-      // Check if IP is from Skroutz
       boolean isFromSkroutz = ALLOWED_IP_PREFIXES.stream().anyMatch(remoteIp::startsWith);
 
       if (!isFromSkroutz) {
@@ -42,7 +41,6 @@ public class SkroutzIpFilter extends OncePerRequestFilter {
     filterChain.doFilter(request, response);
   }
 
-  /** Gets the client IP address from the request, handling proxies */
   private String getClientIp(HttpServletRequest request) {
     String ip = request.getHeader("X-Forwarded-For");
 
@@ -62,7 +60,6 @@ public class SkroutzIpFilter extends OncePerRequestFilter {
       ip = request.getRemoteAddr();
     }
 
-    // If multiple IPs are provided, take the first one (client's IP)
     if (ip != null && ip.contains(",")) {
       ip = ip.split(",")[0].trim();
     }
