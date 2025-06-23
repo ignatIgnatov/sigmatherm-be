@@ -52,7 +52,7 @@ public class SkroutzWebhookController {
                 return ResponseEntity.badRequest().body("Invalid or missing event_type");
             }
 
-            log.info("Received Skroutz webhook type: " + type + " and state: " + state);
+            log.info("Received Skroutz webhook type: " + type + " with state: " + state);
 
             Synchronization synchronization = synchronizationService.createSync(Platform.Skroutz);
 
@@ -90,7 +90,9 @@ public class SkroutzWebhookController {
     private void updateSkroutzXml(String productId) {
         Product product = productService.findProductById(productId);
         try {
-            skroutzFeedService.updateFeed(new File(FEED_PATH), List.of(product));
+            if (product != null) {
+                skroutzFeedService.updateFeed(new File(FEED_PATH), List.of(product));
+            }
         } catch (Exception e) {
             log.error("Update feed exception: " + e.getMessage());
         }

@@ -1,4 +1,4 @@
-package com.ludogoriesoft.sigmatherm.config;
+package com.ludogoriesoft.sigmatherm.filter;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

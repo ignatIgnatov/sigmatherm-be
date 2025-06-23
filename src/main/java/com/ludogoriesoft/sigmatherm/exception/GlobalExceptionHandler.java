@@ -22,19 +22,30 @@ import java.util.Map;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ExceptionResponse> handleBadEnum(HttpMessageNotReadableException ex) {
-        ExceptionResponse response = createExceptionResponse(
-                "Malformed JSON request or invalid enum value",
-                HttpStatus.BAD_REQUEST,
-                HttpStatus.BAD_REQUEST.value());
-        return ResponseEntity.badRequest().body(response);
+    @ExceptionHandler(ApiException.class)
+    public ResponseEntity<ExceptionResponse> handleApiException(ApiException ex) {
+        ExceptionResponse exceptionResponse = ApiExceptionParser.parseException(ex);
+        return ResponseEntity.status(exceptionResponse.getStatus()).body(exceptionResponse);
     }
 
-    @ExceptionHandler(ApiException.class)
-    public ResponseEntity<ExceptionResponse> handleApiExceptions(ApiException exception) {
-        return ResponseEntity.status(exception.getStatus())
-                .body(ApiExceptionParser.parseException(exception));
+    @ExceptionHandler(ObjectNotFoundException.class)
+    public ResponseEntity<ExceptionResponse> handleObjectNotFoundException(ObjectNotFoundException ex) {
+        return handleApiException(ex);
+    }
+
+    @ExceptionHandler(ObjectExistsException.class)
+    public ResponseEntity<ExceptionResponse> handleObjectExistsException(ObjectExistsException ex) {
+        return handleApiException(ex);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ExceptionResponse> handleAccessDeniedException(AccessDeniedException ex) {
+        return handleApiException(ex);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ExceptionResponse> handleAuthenticationException(AuthenticationException ex) {
+        return handleApiException(ex);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -58,7 +69,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ExceptionResponse> handleConstraintViolationException(ConstraintViolationException ex) {
-        ExceptionResponse response = createExceptionResponse(
+        ExceptionResponse response = ApiExceptionParser.parseException(
                 "Constraint violation: " + ex.getMessage(),
                 HttpStatus.BAD_REQUEST,
                 HttpStatus.BAD_REQUEST.value());
@@ -67,7 +78,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ExceptionResponse> handleMethodArgumentTypeMismatch(MethodArgumentTypeMismatchException ex) {
-        ExceptionResponse response = createExceptionResponse(
+        ExceptionResponse response = ApiExceptionParser.parseException(
                 ex.getMessage(),
                 HttpStatus.BAD_REQUEST,
                 HttpStatus.BAD_REQUEST.value());
@@ -76,7 +87,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ExceptionResponse> handleMissingParams(MissingServletRequestParameterException ex) {
-        ExceptionResponse response = createExceptionResponse(
+        ExceptionResponse response = ApiExceptionParser.parseException(
                 String.format("Required parameter '%s' is not present", ex.getParameterName()),
                 HttpStatus.BAD_REQUEST,
                 HttpStatus.BAD_REQUEST.value());
@@ -85,7 +96,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
     public ResponseEntity<ExceptionResponse> handleMediaTypeNotAcceptable() {
-        ExceptionResponse response = createExceptionResponse(
+        ExceptionResponse response = ApiExceptionParser.parseException(
                 "Requested media type is not supported",
                 HttpStatus.NOT_ACCEPTABLE,
                 HttpStatus.NOT_ACCEPTABLE.value());
@@ -94,29 +105,29 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(NoHandlerFoundException.class)
     public ResponseEntity<ExceptionResponse> handleNoHandlerFoundException(NoHandlerFoundException ex) {
-        ExceptionResponse response = createExceptionResponse(
+        ExceptionResponse response = ApiExceptionParser.parseException(
                 String.format("Could not find the %s method for URL %s", ex.getHttpMethod(), ex.getRequestURL()),
                 HttpStatus.BAD_REQUEST,
                 HttpStatus.BAD_REQUEST.value());
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
     }
 
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ExceptionResponse> handleBadEnum(HttpMessageNotReadableException ex) {
+        ExceptionResponse response = ApiExceptionParser.parseException(
+                "Malformed JSON request or invalid enum value",
+                HttpStatus.BAD_REQUEST,
+                HttpStatus.BAD_REQUEST.value());
+        return ResponseEntity.badRequest().body(response);
+    }
+
     @ExceptionHandler(Exception.class)
     @ResponseBody
     public ResponseEntity<ExceptionResponse> handleAllExceptions(Exception ex) {
-        ExceptionResponse response = createExceptionResponse(
+        ExceptionResponse response = ApiExceptionParser.parseException(
                 "An unexpected error occurred: " + ex.getMessage(),
                 HttpStatus.INTERNAL_SERVER_ERROR,
                 HttpStatus.INTERNAL_SERVER_ERROR.value());
         return ResponseEntity.internalServerError().body(response);
-    }
-
-    private static ExceptionResponse createExceptionResponse(String message, HttpStatus status, int statusCode) {
-        return ExceptionResponse.builder()
-                .dateTime(LocalDateTime.now())
-                .message(message)
-                .status(status)
-                .statusCode(statusCode)
-                .build();
     }
 }
