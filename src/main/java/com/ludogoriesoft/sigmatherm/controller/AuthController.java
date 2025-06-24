@@ -8,6 +8,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -33,5 +34,11 @@ public class AuthController {
         userService.createUser(registerRequest);
         log.info("Successful registration for user with email " + registerRequest.getEmail());
         return ResponseEntity.ok("Registration successfully");
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<String> logout() {
+        SecurityContextHolder.clearContext();
+        return ResponseEntity.ok("Logout successful");
     }
 }
