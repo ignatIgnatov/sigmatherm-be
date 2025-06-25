@@ -33,7 +33,7 @@ public class CronJobService {
     private final EmagService emagService;
     private final SkroutzFeedService skroutzFeedService;
 
-    @Scheduled(cron = "0 0 0 * * *")
+    @Scheduled(cron = "0 30 23 * * *")
     public void fetchEmagBgOrders() {
         Synchronization lastSync = synchronizationService.getLastSyncByPlatform(Platform.eMagBg);
         Synchronization currentSync = synchronizationService.createSync(Platform.eMagBg);
@@ -41,7 +41,7 @@ public class CronJobService {
         emagService.fetchReturnedEmagOrders(emagBgUrl + RETURNED_ORDER_URL, lastSync);
     }
 
-    @Scheduled(cron = "0 2 0 * * *")
+    @Scheduled(cron = "0 32 23 * * *")
     public void fetchEmagRoOrders() {
         Synchronization lastSync = synchronizationService.getLastSyncByPlatform(Platform.eMagRo);
         Synchronization currentSync = synchronizationService.createSync(Platform.eMagRo);
@@ -49,7 +49,7 @@ public class CronJobService {
         emagService.fetchReturnedEmagOrders(emagRoUrl + RETURNED_ORDER_URL, lastSync);
     }
 
-    @Scheduled(cron = "0 4 0 * * *")
+    @Scheduled(cron = "0 34 23 * * *")
     public void fetchEmagHuOrders() {
         Synchronization lastSync = synchronizationService.getLastSyncByPlatform(Platform.eMagHu);
         Synchronization currentSync = synchronizationService.createSync(Platform.eMagHu);
@@ -57,18 +57,20 @@ public class CronJobService {
         emagService.fetchReturnedEmagOrders(emagHuUrl + RETURNED_ORDER_URL, lastSync);
     }
 
-    @Scheduled(cron = "0 6 0 * * *")
+    @Scheduled(cron = "0 40 23 * * *")
     public void updateStockToStores() throws Exception {
         List<Product> products = productService.getAllProductsSynchronizedToday();
 
-        // To Emag stores
-        for (Product product : products) {
-            emagService.uploadActualStockToEmag(emagBgUrl, product.getId(), product.getStock());
-            emagService.uploadActualStockToEmag(emagRoUrl, product.getId(), product.getStock());
-            emagService.uploadActualStockToEmag(emagHuUrl, product.getId(), product.getStock());
-        }
+       if (!products.isEmpty()) {
+           // To Emag stores
+           for (Product product : products) {
+               emagService.uploadActualStockToEmag(emagBgUrl, product.getId(), product.getStock());
+               emagService.uploadActualStockToEmag(emagRoUrl, product.getId(), product.getStock());
+               emagService.uploadActualStockToEmag(emagHuUrl, product.getId(), product.getStock());
+           }
 
-        // To Skroutz.gr store
-        skroutzFeedService.updateFeed(new File(FEED_PATH), products);
+           // To Skroutz.gr store
+           skroutzFeedService.updateFeed(new File(FEED_PATH), products);
+       }
     }
 }

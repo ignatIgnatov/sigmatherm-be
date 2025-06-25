@@ -26,8 +26,8 @@ public class Product {
   private String name;
 
   @ManyToOne
-  @JoinColumn(name = "supplier_id")
-  private Supplier supplier;
+  @JoinColumn(name = "brand_id")
+  private Brand brand;
 
   @ManyToOne
   @JoinColumn(name = "synchronization_id")

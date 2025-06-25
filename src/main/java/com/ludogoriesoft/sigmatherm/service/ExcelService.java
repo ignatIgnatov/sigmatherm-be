@@ -1,9 +1,9 @@
 package com.ludogoriesoft.sigmatherm.service;
 
 import com.ludogoriesoft.sigmatherm.entity.Product;
-import com.ludogoriesoft.sigmatherm.entity.Supplier;
+import com.ludogoriesoft.sigmatherm.entity.Brand;
 import com.ludogoriesoft.sigmatherm.repository.ProductRepository;
-import com.ludogoriesoft.sigmatherm.repository.SupplierRepository;
+import com.ludogoriesoft.sigmatherm.repository.BrandRepository;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -24,7 +24,7 @@ import org.springframework.stereotype.Service;
 public class ExcelService {
 
   private final ProductRepository productRepository;
-  private final SupplierRepository supplierRepository;
+  private final BrandRepository brandRepository;
 
   private static final String OFFER_DIR = "/app/offers/";
 
@@ -107,13 +107,13 @@ public class ExcelService {
   }
 
   private void  createSupplierInDb(Row row) {
-    if (!supplierRepository.existsByNameIgnoreCase(row.getCell(0).getStringCellValue())) {
-      Supplier supplier = new Supplier();
-      supplier.setName(row.getCell(0).getStringCellValue());
+    if (!brandRepository.existsByNameIgnoreCase(row.getCell(0).getStringCellValue())) {
+      Brand brand = new Brand();
+      brand.setName(row.getCell(0).getStringCellValue());
       String marginString = row.getCell(1).getStringCellValue();
       double margin = Double.parseDouble(marginString);
-      supplier.setPriceMargin(BigDecimal.valueOf(margin));
-      supplierRepository.save(supplier);
+      brand.setPriceMargin(BigDecimal.valueOf(margin));
+      brandRepository.save(brand);
     }
   }
 
@@ -123,8 +123,8 @@ public class ExcelService {
       product.setId(row.getCell(4).getStringCellValue());
       product.setName(row.getCell(0).getStringCellValue());
       String supplierName = row.getCell(2).getStringCellValue();
-      Supplier supplier = supplierRepository.findByNameIgnoreCase(supplierName);
-      product.setSupplier(supplier);
+      Brand brand = brandRepository.findByNameIgnoreCase(supplierName);
+      product.setBrand(brand);
       String basePrice = row.getCell(7).getStringCellValue();
       product.getPrice().setBasePrice(BigDecimal.valueOf(Double.parseDouble(basePrice)));
       String availabilityString = row.getCell(15).getStringCellValue();

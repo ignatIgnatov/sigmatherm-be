@@ -4,12 +4,12 @@ import com.ludogoriesoft.sigmatherm.dto.request.ProductRequest;
 import com.ludogoriesoft.sigmatherm.dto.response.ProductResponse;
 import com.ludogoriesoft.sigmatherm.entity.Price;
 import com.ludogoriesoft.sigmatherm.entity.Product;
-import com.ludogoriesoft.sigmatherm.entity.Supplier;
+import com.ludogoriesoft.sigmatherm.entity.Brand;
 import com.ludogoriesoft.sigmatherm.entity.Synchronization;
 import com.ludogoriesoft.sigmatherm.exception.ObjectExistsException;
 import com.ludogoriesoft.sigmatherm.exception.ObjectNotFoundException;
 import com.ludogoriesoft.sigmatherm.repository.ProductRepository;
-import com.ludogoriesoft.sigmatherm.repository.SupplierRepository;
+import com.ludogoriesoft.sigmatherm.repository.BrandRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.modelmapper.ModelMapper;
@@ -23,7 +23,7 @@ import java.util.List;
 public class ProductService {
 
     private final ProductRepository productRepository;
-    private final SupplierRepository supplierRepository;
+    private final BrandRepository brandRepository;
     private final ModelMapper modelMapper;
 
     public ProductResponse createProduct(ProductRequest productRequest) {
@@ -32,7 +32,7 @@ public class ProductService {
                     "Product with id " + productRequest.getId() + " already exists");
         }
 
-        if (!supplierRepository.existsByNameIgnoreCase(productRequest.getSupplierName())) {
+        if (!brandRepository.existsByNameIgnoreCase(productRequest.getSupplierName())) {
             throw new ObjectNotFoundException(
                     "Supplier with name " + productRequest.getSupplierName() + " not found");
         }
@@ -108,14 +108,14 @@ public class ProductService {
     }
 
     private Product createProductInDb(ProductRequest productRequest) {
-        Supplier supplier = supplierRepository.findByNameIgnoreCase(productRequest.getSupplierName());
+        Brand brand = brandRepository.findByNameIgnoreCase(productRequest.getSupplierName());
         Price price = new Price();
         price.setBasePrice(productRequest.getBasePrice());
         Product product =
                 Product.builder()
                         .id(productRequest.getId())
                         .name(productRequest.getName())
-                        .supplier(supplier)
+                        .brand(brand)
                         .price(price)
                         .stock(productRequest.getWarehouseAvailability())
                         .build();

@@ -11,7 +11,7 @@ import java.util.List;
 public interface ProductRepository extends JpaRepository<Product, String> {
     @Query(value = "SELECT p.* FROM product p " +
             "JOIN synchronization s ON p.synchronization_id = s.id " +
-            "WHERE DATE(s.start_date) = CURRENT_DATE",
+            "WHERE DATE(s.read_date) = CURRENT_DATE",
             nativeQuery = true)
     List<Product> findAllProductsSynchronizedToday();
 }

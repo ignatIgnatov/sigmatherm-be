@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Supplier {
+public class Brand {
   @Id
   @GeneratedValue(strategy = GenerationType.UUID)
   private UUID id;

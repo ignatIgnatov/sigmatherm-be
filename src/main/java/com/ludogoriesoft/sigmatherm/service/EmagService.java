@@ -190,7 +190,7 @@ public class EmagService {
         if (lastSync != null) {
             createdAfter =
                     lastSync
-                            .getEndDate()
+                            .getWriteDate()
                             .atZone(ZoneId.systemDefault())
                             .withZoneSameInstant(zone)
                             .toLocalDateTime()
@@ -221,7 +221,7 @@ public class EmagService {
         if (lastSync != null) {
             createdAfter =
                     lastSync
-                            .getEndDate()
+                            .getWriteDate()
                             .atZone(ZoneId.systemDefault())
                             .withZoneSameInstant(zone)
                             .toLocalDateTime()

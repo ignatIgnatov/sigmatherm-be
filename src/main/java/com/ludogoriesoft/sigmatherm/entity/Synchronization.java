@@ -25,8 +25,8 @@ public class Synchronization {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    private LocalDateTime startDate;
-    private LocalDateTime endDate;
+    private LocalDateTime readDate;
+    private LocalDateTime writeDate;
 
     @Enumerated(value = EnumType.STRING)
     private Platform platform;
