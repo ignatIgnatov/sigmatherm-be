@@ -23,6 +23,7 @@ public class Price {
 
     private BigDecimal basePrice;
 
+    private BigDecimal microInvestPrice;
     private BigDecimal eMagBgSalePrice;
     private BigDecimal eMagRoSalePrice;
     private BigDecimal eMagHuSalePrice;

@@ -9,6 +9,7 @@ import java.util.UUID;
 public class PriceResponse {
     private UUID id;
     private BigDecimal basePrice;
+    private BigDecimal microInvestPrice;
     private BigDecimal eMagBgSalePrice;
     private BigDecimal eMagRoSalePrice;
     private BigDecimal eMagHuSalePrice;

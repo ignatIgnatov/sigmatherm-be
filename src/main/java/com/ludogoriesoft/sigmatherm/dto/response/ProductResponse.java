@@ -11,7 +11,6 @@ public class ProductResponse {
   private String id;
   private String name;
   private Supplier supplier;
-  private BigDecimal basePrice;
   private int stock;
   private Synchronization synchronization;
   private PriceResponse price;
