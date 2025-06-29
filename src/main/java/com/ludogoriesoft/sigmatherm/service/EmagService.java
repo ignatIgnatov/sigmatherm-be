@@ -89,7 +89,7 @@ public class EmagService {
             for (EmagReturnedProduct product : result.getProducts()) {
                 String productId = product.getProduct_id();
                 int quantity = product.getQuantity();
-                productService.reduceAvailabilityByReturnedProduct(productId, quantity);
+                productService.increaseAvailabilityByReturn(productId, quantity);
             }
         }
     }

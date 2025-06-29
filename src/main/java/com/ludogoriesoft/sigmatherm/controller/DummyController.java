@@ -1,11 +1,15 @@
 package com.ludogoriesoft.sigmatherm.controller;
 
+import com.ludogoriesoft.sigmatherm.dto.bol.ReturnsResponse;
+import com.ludogoriesoft.sigmatherm.dto.bol.ShipmentResponse;
 import com.ludogoriesoft.sigmatherm.entity.Product;
 import com.ludogoriesoft.sigmatherm.repository.ProductRepository;
+import com.ludogoriesoft.sigmatherm.service.BolService;
 import com.ludogoriesoft.sigmatherm.service.ExcelService;
 import com.ludogoriesoft.sigmatherm.service.ProductService;
 import com.ludogoriesoft.sigmatherm.service.SkroutzFeedService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
@@ -23,6 +27,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/offers")
 @RequiredArgsConstructor
@@ -32,6 +37,7 @@ public class DummyController {
     private final ProductRepository productRepository;
     private final ProductService productService;
     private final SkroutzFeedService skroutzFeedService;
+    private final BolService bolService;
 
     private static final String OFFER_PATH = "/app/offers/offer.xlsx";
     private static final String FEED_PATH = "/app/feeds/skroutz_feed.xml";
@@ -73,5 +79,17 @@ public class DummyController {
         skroutzFeedService.updateFeed(new File(FEED_PATH), products);
 
         return ResponseEntity.ok().body("Product updated successfully!");
+    }
+
+    @GetMapping("/bol/shipments")
+    public ResponseEntity<List<ShipmentResponse.Shipment>> getShipments() {
+        List<ShipmentResponse.Shipment> response = bolService.processShipments();
+        return ResponseEntity.ok().body(response);
+    }
+
+    @GetMapping("/bol/returns")
+    public ResponseEntity<List<ReturnsResponse.Return>> getReturns() {
+        List<ReturnsResponse.Return> response = bolService.processReturns();
+        return ResponseEntity.ok().body(response);
     }
 }

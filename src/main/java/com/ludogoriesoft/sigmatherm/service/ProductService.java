@@ -59,7 +59,7 @@ public class ProductService {
         }
     }
 
-    public void reduceAvailabilityByReturnedProduct(String productId, int quantityReturned) {
+    public void increaseAvailabilityByReturn(String productId, int quantityReturned) {
         Product product = findProductById(productId);
         if (product != null) {
             int newAvailability = product.getStock() + quantityReturned;

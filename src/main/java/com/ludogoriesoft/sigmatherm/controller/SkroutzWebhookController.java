@@ -71,7 +71,7 @@ public class SkroutzWebhookController {
                         String productId = line.getId();
                         int quantity = line.getQuantity();
                         productService.setProductSynchronization(productId, synchronization);
-                        productService.reduceAvailabilityByReturnedProduct(productId, quantity);
+                        productService.increaseAvailabilityByReturn(productId, quantity);
                         updateSkroutzXml(productId);
                     });
                     break;
