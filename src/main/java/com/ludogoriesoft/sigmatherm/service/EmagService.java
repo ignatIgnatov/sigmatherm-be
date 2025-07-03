@@ -81,15 +81,18 @@ public class EmagService {
         }
     }
 
-    public void fetchReturnedEmagOrders(String url, Synchronization lastSync) {
+    public void fetchReturnedEmagOrders(String url, Synchronization lastSync, Synchronization currentSync) {
 
         EmagReturnedOrdersResponse ordersResponse = getEmagReturnedOrdersResponse(url, lastSync);
 
-        for (EmagReturnedResult result : ordersResponse.getResults()) {
-            for (EmagReturnedProduct product : result.getProducts()) {
-                String productId = product.getProduct_id();
-                int quantity = product.getQuantity();
-                productService.increaseAvailabilityByReturn(productId, quantity);
+        if (ordersResponse != null && ordersResponse.getResults() != null && !ordersResponse.getResults().isEmpty()) {
+            for (EmagReturnedResult result : ordersResponse.getResults()) {
+                for (EmagReturnedProduct product : result.getProducts()) {
+                    String productId = product.getProduct_id();
+                    int quantity = product.getQuantity();
+                    productService.increaseAvailabilityByReturn(productId, quantity);
+                    productService.setSync(productId, currentSync);
+                }
             }
         }
     }
@@ -122,7 +125,7 @@ public class EmagService {
             }
         }
 
-        synchronizationService.setEndDate(synchronization);
+        synchronizationService.setWriteDate(synchronization);
         log.info(synchronization.getPlatform() + " synchronized successfully!");
     }
 
@@ -147,6 +150,7 @@ public class EmagService {
 
         ResponseEntity<EmagReturnedOrdersResponse> response =
                 restTemplate.exchange(url, HttpMethod.GET, entity, EmagReturnedOrdersResponse.class);
+
         return response.getBody();
     }
 

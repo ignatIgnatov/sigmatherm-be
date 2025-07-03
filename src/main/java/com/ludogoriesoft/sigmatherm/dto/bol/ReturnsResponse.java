@@ -16,6 +16,7 @@ public class ReturnsResponse {
         private String ean;
         private int expectedQuantity;
         private boolean handled;
+        private List<ProcessingResult> processingResults;
     }
 
     @Data
@@ -23,6 +24,13 @@ public class ReturnsResponse {
         private String returnId;
         private OffsetDateTime registrationDateTime;
         private List<ReturnItem> returnItems;
+    }
+
+    @Data
+    public static class ProcessingResult {
+        private int quantity;
+        private String handlingResult;
+        private OffsetDateTime processingDateTime;
     }
 }
 

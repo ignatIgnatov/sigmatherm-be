@@ -32,13 +32,14 @@ public class CronJobService {
     private final SynchronizationService synchronizationService;
     private final EmagService emagService;
     private final SkroutzFeedService skroutzFeedService;
+    private final BolService bolService;
 
     @Scheduled(cron = "0 30 23 * * *")
     public void fetchEmagBgOrders() {
         Synchronization lastSync = synchronizationService.getLastSyncByPlatform(Platform.eMagBg);
         Synchronization currentSync = synchronizationService.createSync(Platform.eMagBg);
         emagService.fetchEmagOrders(emagBgUrl + ORDER_URL, currentSync, lastSync);
-        emagService.fetchReturnedEmagOrders(emagBgUrl + RETURNED_ORDER_URL, lastSync);
+        emagService.fetchReturnedEmagOrders(emagBgUrl + RETURNED_ORDER_URL, lastSync, currentSync);
     }
 
     @Scheduled(cron = "0 32 23 * * *")
@@ -46,7 +47,7 @@ public class CronJobService {
         Synchronization lastSync = synchronizationService.getLastSyncByPlatform(Platform.eMagRo);
         Synchronization currentSync = synchronizationService.createSync(Platform.eMagRo);
         emagService.fetchEmagOrders(emagRoUrl + ORDER_URL, currentSync, lastSync);
-        emagService.fetchReturnedEmagOrders(emagRoUrl + RETURNED_ORDER_URL, lastSync);
+        emagService.fetchReturnedEmagOrders(emagRoUrl + RETURNED_ORDER_URL, lastSync, currentSync);
     }
 
     @Scheduled(cron = "0 34 23 * * *")
@@ -54,7 +55,12 @@ public class CronJobService {
         Synchronization lastSync = synchronizationService.getLastSyncByPlatform(Platform.eMagHu);
         Synchronization currentSync = synchronizationService.createSync(Platform.eMagHu);
         emagService.fetchEmagOrders(emagHuUrl + ORDER_URL, currentSync, lastSync);
-        emagService.fetchReturnedEmagOrders(emagHuUrl + RETURNED_ORDER_URL, lastSync);
+        emagService.fetchReturnedEmagOrders(emagHuUrl + RETURNED_ORDER_URL, lastSync, currentSync);
+    }
+
+    public void fetchBolOrders() {
+        bolService.processShipments();
+        bolService.processReturns();
     }
 
     @Scheduled(cron = "0 40 23 * * *")
@@ -62,11 +68,15 @@ public class CronJobService {
         List<Product> products = productService.getAllProductsSynchronizedToday();
 
        if (!products.isEmpty()) {
-           // To Emag stores
            for (Product product : products) {
+               // To Emag stores
                emagService.uploadActualStockToEmag(emagBgUrl, product.getId(), product.getStock());
                emagService.uploadActualStockToEmag(emagRoUrl, product.getId(), product.getStock());
                emagService.uploadActualStockToEmag(emagHuUrl, product.getId(), product.getStock());
+
+               // To Bol.com store
+               // TODO: Here porductId must be replaced with offerId
+               bolService.processStockUpdate(product.getId(), product.getStock());
            }
 
            // To Skroutz.gr store

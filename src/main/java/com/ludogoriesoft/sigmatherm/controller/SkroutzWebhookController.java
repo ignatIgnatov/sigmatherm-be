@@ -61,7 +61,7 @@ public class SkroutzWebhookController {
                     webhook.getOrder().getLine_items().forEach(line -> {
                         String productId = line.getId();
                         int quantity = line.getQuantity();
-                        productService.setProductSynchronization(productId, synchronization);
+                        productService.setSync(productId, synchronization);
                         productService.reduceAvailabilityByOrder(productId, quantity);
                         updateSkroutzXml(productId);
                     });
@@ -70,7 +70,7 @@ public class SkroutzWebhookController {
                     webhook.getOrder().getLine_items().forEach(line -> {
                         String productId = line.getId();
                         int quantity = line.getQuantity();
-                        productService.setProductSynchronization(productId, synchronization);
+                        productService.setSync(productId, synchronization);
                         productService.increaseAvailabilityByReturn(productId, quantity);
                         updateSkroutzXml(productId);
                     });

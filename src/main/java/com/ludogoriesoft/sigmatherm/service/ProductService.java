@@ -84,14 +84,6 @@ public class ProductService {
                 .toList();
     }
 
-    public void setProductSynchronization(String productId, Synchronization synchronization) {
-        Product product = findProductById(productId);
-        if (product != null) {
-            product.setSynchronization(synchronization);
-            productRepository.save(product);
-        }
-    }
-
     public void setSync(String id, Synchronization synchronization) {
         Product product = findProductById(id);
         if (product != null) {

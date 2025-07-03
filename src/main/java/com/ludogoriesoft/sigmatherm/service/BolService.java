@@ -6,22 +6,20 @@ import com.ludogoriesoft.sigmatherm.dto.bol.ShipmentResponse;
 import com.ludogoriesoft.sigmatherm.dto.bol.StockUpdateRequest;
 import com.ludogoriesoft.sigmatherm.dto.bol.TokenResponse;
 import com.ludogoriesoft.sigmatherm.entity.Product;
+import com.ludogoriesoft.sigmatherm.entity.Synchronization;
 import com.ludogoriesoft.sigmatherm.entity.enums.Platform;
 import com.ludogoriesoft.sigmatherm.exception.ObjectNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.Duration;
 import java.time.OffsetDateTime;
-import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 import java.util.Base64;
 import java.util.List;
 
@@ -30,22 +28,25 @@ import java.util.List;
 @RequiredArgsConstructor
 public class BolService {
 
-    private static final String CLIENT_ID = "6f15af67-9412-4318-9813-b7ae097ea75f";
-    private static final String CLIENT_SECRET = "6Y(zhhmH5A7vGgg0PTyOYeCtq(vxK3OPyJNcsrSQehXk1lzO(xh!mDDz!xufH0cG";
+    @Value("${bol.client.id}")
+    private String clientId;
+
+    @Value("${bol.client.secret}")
+    private String clientSecret;
 
     private final ProductService productService;
     private final SynchronizationService synchronizationService;
-    private final WebClient BOL_WEB_CLIENT = WebClient.create("https://api.bol.com");
+    private final WebClient webClient = WebClient.create("https://api.bol.com");
+
+    private static final String ACCEPT_HEADER = "application/vnd.retailer.v10+json";
+
+    public void processStockUpdate(String offerId, int stock) {
+        String token = getAccessToken();
+        updateSingleStockToBol(token, offerId, stock);
+    }
 
     public List<ShipmentResponse.Shipment> processShipments() {
-        log.info("Starting to process BOL shipments");
-
-        String accessToken = getAccessToken();
-        if (accessToken == null || accessToken.isEmpty()) {
-            log.error("Failed to obtain access token for BOL API");
-            throw new ObjectNotFoundException("No access token found!");
-        }
-
+        String accessToken = obtainAccessToken();
         ShipmentResponse response = fetchShipments(accessToken).block();
 
         if (response == null || response.getShipments() == null || response.getShipments().isEmpty()) {
@@ -53,17 +54,17 @@ public class BolService {
             return List.of();
         }
 
-        List<ShipmentResponse.Shipment> filteredShipments = getTodayShipments(response);
+        List<ShipmentResponse.Shipment> todayShipments = getTodayShipments(response);
 
-        log.info("Processing {} shipments for today", filteredShipments.size());
-        if (filteredShipments.isEmpty()) {
-            log.info("Finished processing 0 BOL orders");
-            return filteredShipments;
+        log.info("Processing {} shipments for today", todayShipments.size());
+        if (todayShipments.isEmpty()) {
+            return response.getShipments(); //Only for testing
         }
 
-        synchronizationService.createSync(Platform.Bol);
-        for (ShipmentResponse.Shipment shipment : filteredShipments) {
+        Synchronization synchronization = synchronizationService.createSync(Platform.Bol);
+        for (ShipmentResponse.Shipment shipment : todayShipments) {
             try {
+                Thread.sleep(1200);
                 ShipmentResponse.Shipment currentShipment = fetchShipmentById(accessToken, shipment.getShipmentId()).block();
                 if (currentShipment == null || currentShipment.getShipmentItems() == null || currentShipment.getShipmentItems().isEmpty()) {
                     log.info("No shipment items in shipment {}", shipment.getShipmentId());
@@ -71,27 +72,26 @@ public class BolService {
                 }
 
                 for (ShipmentResponse.ShipmentItem item : currentShipment.getShipmentItems()) {
-                    String productId = item.getOffer().getReference();
-                    reduceAvailability(shipment, item, productId);
+                    log.info("Item reference: {}", item.getOffer().getReference());
+                    log.info("Item offer id: {}", item.getOffer().getOfferId());
+                    reduceAvailabilityOfShippedItems(shipment, item.getOffer().getReference(), item.getQuantity(), synchronization);
+                    Product product = productService.findProductById(item.getOffer().getReference());
+                    updateSingleStockToBol(accessToken, item.getOffer().getOfferId(), product.getStock());
                 }
 
             } catch (Exception e) {
+                Thread.currentThread().interrupt();
                 log.error("Error processing shipment {}", shipment.getShipmentId(), e);
             }
         }
 
+        synchronizationService.setWriteDate(synchronization);
+        log.info(synchronization.getPlatform() + " synchronized successfully!");
         return response.getShipments();
     }
 
     public List<ReturnsResponse.Return> processReturns() {
-        log.info("Starting to process BOL returns");
-
-        String accessToken = getAccessToken();
-        if (accessToken == null || accessToken.isEmpty()) {
-            log.error("Failed to obtain access token for BOL API");
-            throw new ObjectNotFoundException("No access token found!");
-        }
-
+        String accessToken = obtainAccessToken();
         ReturnsResponse response = fetchReturns(accessToken).block();
 
         if (response == null || response.getReturns() == null || response.getReturns().isEmpty()) {
@@ -100,78 +100,63 @@ public class BolService {
         }
 
         List<ReturnsResponse.Return> todayReturns = getTodayReturns(response);
-        log.info("Found {} today returns", todayReturns.size());
 
+        log.info("Processing {} returns for today", todayReturns.size());
         if (todayReturns.isEmpty()) {
-            log.info("Found 0 today returns");
-            return List.of();
+            return response.getReturns(); //Only for testing
         }
 
+        Synchronization synchronization = synchronizationService.createSync(Platform.Bol);
         for (ReturnsResponse.Return currentReturn : todayReturns) {
-            if (currentReturn.getReturnItems() == null || currentReturn.getReturnItems().isEmpty()) {
-                log.info("No returns found in this response");
-                return List.of();
-            }
-
-            for (ReturnsResponse.ReturnItem returnItem : currentReturn.getReturnItems()) {
-                OrderResponse order = fetchOrderById(accessToken, returnItem.getOrderId()).block();
-
-                if (order == null || order.getOrderItems() == null || order.getOrderItems().isEmpty()) {
-                    log.info("No orders found in return {}", currentReturn.getReturnId());
+            try {
+                Thread.sleep(1200);
+                if (currentReturn.getReturnItems() == null || currentReturn.getReturnItems().isEmpty()) {
+                    log.info("No items found in return {}", currentReturn.getReturnId());
                     return List.of();
                 }
 
-                reduceAvailabilityOfReturnedItem(currentReturn, returnItem, order);
+                for (ReturnsResponse.ReturnItem returnItem : currentReturn.getReturnItems()) {
+                    OrderResponse order = fetchOrderById(accessToken, returnItem.getOrderId()).block();
+                    if (order == null || order.getOrderItems() == null || order.getOrderItems().isEmpty()) {
+                        log.info("No orders found in return {}", currentReturn.getReturnId());
+                        return List.of();
+                    }
+
+                    boolean returnReceived = checkHandlingResultByReturn(returnItem);
+                    if (!returnReceived) {
+                        log.info("No RETURN_RECEIVED handling result found in return {}", currentReturn.getReturnId());
+                        return List.of();
+                    }
+
+                    reduceAvailabilityOfReturnedItem(currentReturn, returnItem, order, accessToken, synchronization);
+                }
+            } catch (Exception e) {
+                Thread.currentThread().interrupt();
+                log.error("Error processing shipment {}", currentReturn.getReturnId(), e);
             }
         }
 
+        synchronizationService.setWriteDate(synchronization);
+        log.info(synchronization.getPlatform() + " synchronized successfully!");
         return response.getReturns();
     }
 
-    public Mono<Void> pushStocksToBol(List<Product> products) {
-        if (products == null || products.isEmpty()) {
-            log.info("No products to update");
-            return Mono.empty();
+    private String obtainAccessToken() {
+        String accessToken = getAccessToken();
+        if (accessToken == null || accessToken.isEmpty()) {
+            log.error("Failed to obtain access token for BOL API");
+            throw new ObjectNotFoundException("No access token found!");
         }
-
-        return getAccessTokenMono()
-                .flatMap(token -> {
-                    log.info("Starting stock update for {} products", products.size());
-
-                    return Flux.fromIterable(products)
-                            .index()
-                            .delayElements(Duration.ofMillis(200))
-                            .flatMap(tuple -> {
-                                long index = tuple.getT1() + 1;
-                                Product product = tuple.getT2();
-
-                                if (product.getId() == null || product.getId().isEmpty()) {
-                                    log.warn("[{}/{}] Skipping product {} - no bolOfferId",
-                                            index, products.size(), product.getId());
-                                    return Mono.empty();
-                                }
-
-                                log.debug("[{}/{}] Updating stock for offer {} to {}",
-                                        index, products.size(), product.getId(), product.getStock());
-
-                                return updateSingleStock(token, product.getId(), product.getStock())
-                                        .onErrorResume(e -> {
-                                            log.error("[{}/{}] Failed to update offer {}: {}",
-                                                    index, products.size(), product.getId(), e.getMessage());
-                                            return Mono.empty();
-                                        });
-                            })
-                            .then();
-                })
-                .doOnSuccess(v -> log.info("Completed stock update for {} products", products.size()))
-                .doOnError(e -> log.error("Stock update failed", e));
+        return accessToken;
     }
 
-    private Mono<Void> updateSingleStock(String token, String offerId, int stock) {
-        return BOL_WEB_CLIENT.put()
+    private void updateSingleStockToBol(String token, String offerId, int stock) {
+        webClient.put()
                 .uri("/retailer/offers/{offerId}/stock", offerId)
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + token)
-                .header(HttpHeaders.ACCEPT, "application/vnd.retailer.v10+json")
+                .headers(header -> {
+                    header.setBearerAuth(token);
+                    header.set(HttpHeaders.ACCEPT, ACCEPT_HEADER);
+                })
                 .contentType(MediaType.APPLICATION_JSON)
                 .bodyValue(new StockUpdateRequest(stock, true))
                 .retrieve()
@@ -189,24 +174,16 @@ public class BolService {
                 .bodyToMono(Void.class);
     }
 
-    private Mono<String> getAccessTokenMono() {
-        return Mono.fromCallable(this::getAccessToken)
-                .flatMap(token -> {
-                    if (token == null || token.isEmpty()) {
-                        return Mono.error(new ObjectNotFoundException("No access token found"));
-                    }
-                    return Mono.just(token);
-                });
-    }
-
     private Mono<OrderResponse> fetchOrderById(String accessToken, String orderId) {
-        return BOL_WEB_CLIENT
+        return webClient
                 .get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/retailer/orders/" + orderId)
                         .build())
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                .header(HttpHeaders.ACCEPT, "application/vnd.retailer.v10+json")
+                .headers(header -> {
+                    header.setBearerAuth(accessToken);
+                    header.set(HttpHeaders.ACCEPT, ACCEPT_HEADER);
+                })
                 .retrieve()
                 .onStatus(
                         status -> !status.is2xxSuccessful(),
@@ -219,13 +196,15 @@ public class BolService {
     }
 
     private Mono<ShipmentResponse.Shipment> fetchShipmentById(String accessToken, String shipmentId) {
-        return BOL_WEB_CLIENT
+        return webClient
                 .get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/retailer/shipments/" + shipmentId)
                         .build())
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                .header(HttpHeaders.ACCEPT, "application/vnd.retailer.v10+json")
+                .headers(header -> {
+                    header.setBearerAuth(accessToken);
+                    header.set(HttpHeaders.ACCEPT, ACCEPT_HEADER);
+                })
                 .retrieve()
                 .onStatus(
                         status -> !status.is2xxSuccessful(),
@@ -238,14 +217,16 @@ public class BolService {
     }
 
     private Mono<ShipmentResponse> fetchShipments(String accessToken) {
-        return BOL_WEB_CLIENT
+        return webClient
                 .get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/retailer/shipments")
                         .queryParam("fulfilment-method", "FBR")
                         .build())
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                .header(HttpHeaders.ACCEPT, "application/vnd.retailer.v10+json")
+                .headers(header -> {
+                    header.setBearerAuth(accessToken);
+                    header.set(HttpHeaders.ACCEPT, ACCEPT_HEADER);
+                })
                 .retrieve()
                 .onStatus(
                         status -> !status.is2xxSuccessful(),
@@ -258,18 +239,16 @@ public class BolService {
     }
 
     private Mono<ReturnsResponse> fetchReturns(String accessToken) {
-        OffsetDateTime todayStart = OffsetDateTime.now().truncatedTo(ChronoUnit.DAYS);
-        String todayStartStr = todayStart.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME);
-
-        return BOL_WEB_CLIENT
+        return webClient
                 .get()
                 .uri(uriBuilder -> uriBuilder
                         .path("/retailer/returns")
-                        .queryParam("handled", "true")
-                        .queryParam("registration-date-time-from", todayStartStr)
+//                        .queryParam("handled", "true")
                         .build())
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                .header(HttpHeaders.ACCEPT, "application/vnd.retailer.v10+json")
+                .headers(header -> {
+                    header.setBearerAuth(accessToken);
+                    header.set(HttpHeaders.ACCEPT, ACCEPT_HEADER);
+                })
                 .retrieve()
                 .onStatus(
                         status -> !status.is2xxSuccessful(),
@@ -313,22 +292,26 @@ public class BolService {
                 .toList();
     }
 
-    private void reduceAvailability(ShipmentResponse.Shipment shipment, ShipmentResponse.ShipmentItem item, String productId) {
+    private void reduceAvailabilityOfShippedItems(ShipmentResponse.Shipment shipment, String productId, int quantity, Synchronization synchronization) {
         try {
-            log.debug("Reducing availability for offer {} by {}", productId, item.getQuantity());
-            productService.reduceAvailabilityByOrder(item.getOrderItemId(), item.getQuantity());
+            log.debug("Reducing availability for offer {} by {}", productId, quantity);
+            productService.reduceAvailabilityByOrder(productId, quantity);
+            productService.setSync(productId, synchronization);
         } catch (Exception e) {
             log.error("Error processing item {} in shipment {}", productId, shipment.getShipmentId(), e);
         }
     }
 
-    private void reduceAvailabilityOfReturnedItem(ReturnsResponse.Return currentReturn, ReturnsResponse.ReturnItem returnItem, OrderResponse order) {
+    private void reduceAvailabilityOfReturnedItem(ReturnsResponse.Return currentReturn, ReturnsResponse.ReturnItem returnItem, OrderResponse order, String accessToken, Synchronization synchronization) {
         for (OrderResponse.OrderItem orderItem : order.getOrderItems()) {
             if (orderItem.getProduct().getEan().equals(returnItem.getEan())) {
                 String productId = orderItem.getOffer().getReference();
                 try {
                     log.debug("Reducing availability for offer {} by {}", productId, orderItem.getQuantity());
                     productService.increaseAvailabilityByReturn(productId, orderItem.getQuantity());
+                    productService.setSync(productId, synchronization);
+                    Product product = productService.findProductById(productId);
+                    updateSingleStockToBol(accessToken, orderItem.getOffer().getOfferId(), product.getStock());
                 } catch (Exception e) {
                     log.error("Error processing item {} in return {}", productId, currentReturn.getReturnId(), e);
                 }
@@ -338,7 +321,7 @@ public class BolService {
 
     private String getAccessToken() {
         log.debug("Attempting to get BOL access token");
-        String auth = Base64.getEncoder().encodeToString((CLIENT_ID + ":" + CLIENT_SECRET).getBytes());
+        String auth = Base64.getEncoder().encodeToString((clientId + ":" + clientSecret).getBytes());
 
         try {
             TokenResponse tokenResponse = WebClient.create("https://login.bol.com")
@@ -362,5 +345,18 @@ public class BolService {
             log.error("Failed to obtain access token from BOL", e);
             return null;
         }
+    }
+
+    private static boolean checkHandlingResultByReturn(ReturnsResponse.ReturnItem returnItem) {
+        boolean returnReceived = false;
+        if (returnItem.getProcessingResults() == null || returnItem.getProcessingResults().isEmpty()) {
+            return false;
+        }
+        for (ReturnsResponse.ProcessingResult processingResult : returnItem.getProcessingResults()) {
+            if (processingResult.getHandlingResult().equals("RETURN_RECEIVED")) {
+                returnReceived = true;
+            }
+        }
+        return returnReceived;
     }
 }

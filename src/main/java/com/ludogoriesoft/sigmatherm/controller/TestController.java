@@ -31,7 +31,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/offers")
 @RequiredArgsConstructor
-public class DummyController {
+public class TestController {
 
     private final ExcelService excelService;
     private final ProductRepository productRepository;
@@ -91,5 +91,11 @@ public class DummyController {
     public ResponseEntity<List<ReturnsResponse.Return>> getReturns() {
         List<ReturnsResponse.Return> response = bolService.processReturns();
         return ResponseEntity.ok().body(response);
+    }
+
+    @GetMapping("/bol/update-stock")
+    public ResponseEntity<String> updateStock(@RequestParam("offerId") String offerId, @RequestParam("stock") int stock) {
+        bolService.processStockUpdate(offerId, stock);
+        return ResponseEntity.ok().body("Stock updated successfully");
     }
 }
