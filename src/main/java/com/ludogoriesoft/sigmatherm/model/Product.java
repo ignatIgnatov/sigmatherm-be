@@ -1,4 +1,4 @@
-package com.ludogoriesoft.sigmatherm.entity;
+package com.ludogoriesoft.sigmatherm.model;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -38,7 +38,7 @@ public class Product {
   private Price price;
 
   private int stock;
-  private String status = "1";
+  private String status = "4";
   private String vatId;
-  private String handlingTime;
+  private String handlingTime = "1";
 }

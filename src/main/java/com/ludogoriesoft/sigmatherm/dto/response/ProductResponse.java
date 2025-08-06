@@ -1,8 +1,8 @@
 package com.ludogoriesoft.sigmatherm.dto.response;
 
-import com.ludogoriesoft.sigmatherm.entity.Brand;
+import com.ludogoriesoft.sigmatherm.model.Brand;
 
-import com.ludogoriesoft.sigmatherm.entity.Synchronization;
+import com.ludogoriesoft.sigmatherm.model.Synchronization;
 import lombok.Data;
 
 @Data

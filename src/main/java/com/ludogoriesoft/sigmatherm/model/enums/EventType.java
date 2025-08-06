@@ -1,4 +1,4 @@
-package com.ludogoriesoft.sigmatherm.entity.enums;
+package com.ludogoriesoft.sigmatherm.model.enums;
 
 public enum EventType {
     new_order,

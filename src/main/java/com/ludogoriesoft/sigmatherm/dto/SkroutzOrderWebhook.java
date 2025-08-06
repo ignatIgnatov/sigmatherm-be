@@ -1,7 +1,7 @@
 package com.ludogoriesoft.sigmatherm.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.ludogoriesoft.sigmatherm.entity.enums.EventType;
+import com.ludogoriesoft.sigmatherm.model.enums.EventType;
 import java.math.BigDecimal;
 import java.util.List;
 import lombok.Data;

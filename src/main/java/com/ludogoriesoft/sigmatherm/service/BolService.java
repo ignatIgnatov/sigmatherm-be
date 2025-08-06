@@ -5,9 +5,9 @@ import com.ludogoriesoft.sigmatherm.dto.bol.ReturnsResponse;
 import com.ludogoriesoft.sigmatherm.dto.bol.ShipmentResponse;
 import com.ludogoriesoft.sigmatherm.dto.bol.StockUpdateRequest;
 import com.ludogoriesoft.sigmatherm.dto.bol.TokenResponse;
-import com.ludogoriesoft.sigmatherm.entity.Product;
-import com.ludogoriesoft.sigmatherm.entity.Synchronization;
-import com.ludogoriesoft.sigmatherm.entity.enums.Platform;
+import com.ludogoriesoft.sigmatherm.model.Product;
+import com.ludogoriesoft.sigmatherm.model.Synchronization;
+import com.ludogoriesoft.sigmatherm.model.enums.Platform;
 import com.ludogoriesoft.sigmatherm.exception.ObjectNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,7 +40,7 @@ public class BolService {
 
     private static final String ACCEPT_HEADER = "application/vnd.retailer.v10+json";
 
-    public void processStockUpdate(String offerId, int stock) {
+    public void processStockUpdateToBol(String offerId, int stock) {
         String token = getAccessToken();
         updateSingleStockToBol(token, offerId, stock);
     }
@@ -85,7 +85,6 @@ public class BolService {
             }
         }
 
-        synchronizationService.setWriteDate(synchronization);
         log.info(synchronization.getPlatform() + " synchronized successfully!");
         return response.getShipments();
     }
@@ -136,7 +135,6 @@ public class BolService {
             }
         }
 
-        synchronizationService.setWriteDate(synchronization);
         log.info(synchronization.getPlatform() + " synchronized successfully!");
         return response.getReturns();
     }

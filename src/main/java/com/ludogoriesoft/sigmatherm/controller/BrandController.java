@@ -1,6 +1,6 @@
 package com.ludogoriesoft.sigmatherm.controller;
 
-import com.ludogoriesoft.sigmatherm.entity.Brand;
+import com.ludogoriesoft.sigmatherm.model.Brand;
 import com.ludogoriesoft.sigmatherm.service.BrandService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

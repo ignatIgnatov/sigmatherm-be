@@ -1,6 +1,6 @@
 package com.ludogoriesoft.sigmatherm.repository;
 
-import com.ludogoriesoft.sigmatherm.entity.Brand;
+import com.ludogoriesoft.sigmatherm.model.Brand;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

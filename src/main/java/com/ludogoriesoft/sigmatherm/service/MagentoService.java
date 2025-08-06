@@ -2,13 +2,12 @@ package com.ludogoriesoft.sigmatherm.service;
 
 import com.ludogoriesoft.sigmatherm.dto.magento.MagentoProductResponseDto;
 import com.ludogoriesoft.sigmatherm.dto.magento.MagentoProductSalesDto;
-import com.ludogoriesoft.sigmatherm.entity.Product;
-import com.ludogoriesoft.sigmatherm.entity.Synchronization;
-import com.ludogoriesoft.sigmatherm.entity.enums.Platform;
+import com.ludogoriesoft.sigmatherm.model.Product;
+import com.ludogoriesoft.sigmatherm.model.Synchronization;
+import com.ludogoriesoft.sigmatherm.model.enums.Platform;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.modelmapper.ModelMapper;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
@@ -39,8 +38,8 @@ public class MagentoService {
 
             Synchronization synchronization = synchronizationService.createSync(Platform.Magento);
             for (MagentoProductSalesDto product : products) {
-                productService.setSync(product.getId(), synchronization);
                 productService.reduceAvailabilityByOrder(product.getId(), product.getSales());
+                productService.setSync(product.getId(), synchronization);
             }
         } catch (Exception e) {
             log.error("Fail to sync the sales from Magenoto: " + e.getMessage());

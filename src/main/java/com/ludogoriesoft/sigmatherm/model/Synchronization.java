@@ -1,6 +1,6 @@
-package com.ludogoriesoft.sigmatherm.entity;
+package com.ludogoriesoft.sigmatherm.model;
 
-import com.ludogoriesoft.sigmatherm.entity.enums.Platform;
+import com.ludogoriesoft.sigmatherm.model.enums.Platform;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;

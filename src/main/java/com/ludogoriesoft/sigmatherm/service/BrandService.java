@@ -1,6 +1,6 @@
 package com.ludogoriesoft.sigmatherm.service;
 
-import com.ludogoriesoft.sigmatherm.entity.Brand;
+import com.ludogoriesoft.sigmatherm.model.Brand;
 import com.ludogoriesoft.sigmatherm.repository.BrandRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

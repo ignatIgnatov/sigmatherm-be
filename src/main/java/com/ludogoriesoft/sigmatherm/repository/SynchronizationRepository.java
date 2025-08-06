@@ -1,7 +1,7 @@
 package com.ludogoriesoft.sigmatherm.repository;
 
-import com.ludogoriesoft.sigmatherm.entity.Synchronization;
-import com.ludogoriesoft.sigmatherm.entity.enums.Platform;
+import com.ludogoriesoft.sigmatherm.model.Synchronization;
+import com.ludogoriesoft.sigmatherm.model.enums.Platform;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;

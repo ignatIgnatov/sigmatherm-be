@@ -1,7 +1,6 @@
 package com.ludogoriesoft.sigmatherm.controller;
 
 import com.ludogoriesoft.sigmatherm.service.CronJobService;
-import com.ludogoriesoft.sigmatherm.service.EmagService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,27 +17,27 @@ public class EmagOrdersController {
 
   @GetMapping("/bg")
   public ResponseEntity<String> getEmagBgOrders() {
-    cronJobService.fetchEmagBgOrders();
+    cronJobService.fetchEmagBgData();
     return new ResponseEntity<>("Emag fetch success!", HttpStatus.OK);
   }
 
   @GetMapping("/ro")
   public ResponseEntity<String> getEmagRoOrders() {
-    cronJobService.fetchEmagRoOrders();
+    cronJobService.fetchEmagRoData();
     return new ResponseEntity<>("Emag fetch success!", HttpStatus.OK);
   }
 
   @GetMapping("/hu")
   public ResponseEntity<String> getEmagHuOrders() {
-    cronJobService.fetchEmagHuOrders();
+    cronJobService.fetchEmagHuData();
     return new ResponseEntity<>("Emag fetch success!", HttpStatus.OK);
   }
 
   @GetMapping("all")
   public ResponseEntity<String> getManualEmagOrdersFetch() {
-    cronJobService.fetchEmagBgOrders();
-    cronJobService.fetchEmagRoOrders();
-    cronJobService.fetchEmagHuOrders();
+    cronJobService.fetchEmagBgData();
+    cronJobService.fetchEmagRoData();
+    cronJobService.fetchEmagHuData();
     return new ResponseEntity<>("Emag fetch success!", HttpStatus.OK);
   }
 }

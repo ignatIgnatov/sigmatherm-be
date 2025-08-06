@@ -1,6 +1,6 @@
 package com.ludogoriesoft.sigmatherm.helper;
 
-import com.ludogoriesoft.sigmatherm.entity.User;
+import com.ludogoriesoft.sigmatherm.model.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;

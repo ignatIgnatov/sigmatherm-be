@@ -8,7 +8,7 @@ import com.ludogoriesoft.sigmatherm.dto.emag.EmagProduct;
 import com.ludogoriesoft.sigmatherm.dto.emag.EmagReturnedOrdersResponse;
 import com.ludogoriesoft.sigmatherm.dto.emag.EmagReturnedProduct;
 import com.ludogoriesoft.sigmatherm.dto.emag.EmagReturnedResult;
-import com.ludogoriesoft.sigmatherm.entity.Synchronization;
+import com.ludogoriesoft.sigmatherm.model.Synchronization;
 import com.ludogoriesoft.sigmatherm.exception.EmagException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,9 +53,8 @@ public class EmagService {
 
     private final RestTemplate restTemplate;
     private final ProductService productService;
-    private final SynchronizationService synchronizationService;
 
-    public void uploadActualStockToEmag(String url, String productId, int stock) {
+    public void processStockUpdateToEmag(String url, String productId, int stock) {
         HttpHeaders headers = getHeaders();
 
         Map<String, Object> body = new HashMap<>();
@@ -125,7 +124,6 @@ public class EmagService {
             }
         }
 
-        synchronizationService.setWriteDate(synchronization);
         log.info(synchronization.getPlatform() + " synchronized successfully!");
     }
 

@@ -1,7 +1,7 @@
 package com.ludogoriesoft.sigmatherm.service;
 
 import com.ludogoriesoft.sigmatherm.dto.skroutz.MyWebStore;
-import com.ludogoriesoft.sigmatherm.entity.Product;
+import com.ludogoriesoft.sigmatherm.model.Product;
 import com.ludogoriesoft.sigmatherm.exception.ObjectNotFoundException;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.Marshaller;
@@ -10,7 +10,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -22,7 +21,7 @@ public class SkroutzFeedService {
 
     private static final String FEED_PATH = "/app/feeds/skroutz_feed.xml";
 
-    public void updateFeed(File sourceXmlFile, List<Product> updatedProducts) throws Exception {
+    public void processStockUpdateToSkroutz(File sourceXmlFile, List<Product> updatedProducts) throws Exception {
         if (!sourceXmlFile.exists()) {
             throw new ObjectNotFoundException("Source XML file not found: " + sourceXmlFile.getAbsolutePath());
         }

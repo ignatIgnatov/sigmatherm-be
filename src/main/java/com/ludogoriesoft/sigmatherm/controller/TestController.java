@@ -2,7 +2,7 @@ package com.ludogoriesoft.sigmatherm.controller;
 
 import com.ludogoriesoft.sigmatherm.dto.bol.ReturnsResponse;
 import com.ludogoriesoft.sigmatherm.dto.bol.ShipmentResponse;
-import com.ludogoriesoft.sigmatherm.entity.Product;
+import com.ludogoriesoft.sigmatherm.model.Product;
 import com.ludogoriesoft.sigmatherm.repository.ProductRepository;
 import com.ludogoriesoft.sigmatherm.service.BolService;
 import com.ludogoriesoft.sigmatherm.service.ExcelService;
@@ -76,7 +76,7 @@ public class TestController {
 
         List<Product> products = new ArrayList<>();
         products.add(product);
-        skroutzFeedService.updateFeed(new File(FEED_PATH), products);
+        skroutzFeedService.processStockUpdateToSkroutz(new File(FEED_PATH), products);
 
         return ResponseEntity.ok().body("Product updated successfully!");
     }
@@ -95,7 +95,7 @@ public class TestController {
 
     @GetMapping("/bol/update-stock")
     public ResponseEntity<String> updateStock(@RequestParam("offerId") String offerId, @RequestParam("stock") int stock) {
-        bolService.processStockUpdate(offerId, stock);
+        bolService.processStockUpdateToBol(offerId, stock);
         return ResponseEntity.ok().body("Stock updated successfully");
     }
 }

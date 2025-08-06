@@ -1,8 +1,7 @@
 package com.ludogoriesoft.sigmatherm.service;
 
-import com.ludogoriesoft.sigmatherm.entity.Synchronization;
-import com.ludogoriesoft.sigmatherm.entity.enums.Platform;
-import com.ludogoriesoft.sigmatherm.exception.ObjectNotFoundException;
+import com.ludogoriesoft.sigmatherm.model.Synchronization;
+import com.ludogoriesoft.sigmatherm.model.enums.Platform;
 import com.ludogoriesoft.sigmatherm.repository.SynchronizationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,7 +11,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
-import java.util.UUID;
 
 @Slf4j
 @Service

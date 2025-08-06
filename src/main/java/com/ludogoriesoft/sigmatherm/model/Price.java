@@ -1,4 +1,4 @@
-package com.ludogoriesoft.sigmatherm.entity;
+package com.ludogoriesoft.sigmatherm.model;
 
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;

@@ -1,7 +1,7 @@
 package com.ludogoriesoft.sigmatherm.service;
 
-import com.ludogoriesoft.sigmatherm.entity.Product;
-import com.ludogoriesoft.sigmatherm.entity.Brand;
+import com.ludogoriesoft.sigmatherm.model.Product;
+import com.ludogoriesoft.sigmatherm.model.Brand;
 import com.ludogoriesoft.sigmatherm.repository.ProductRepository;
 import com.ludogoriesoft.sigmatherm.repository.BrandRepository;
 

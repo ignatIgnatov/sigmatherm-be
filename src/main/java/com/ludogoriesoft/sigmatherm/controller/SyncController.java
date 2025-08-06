@@ -1,6 +1,6 @@
 package com.ludogoriesoft.sigmatherm.controller;
 
-import com.ludogoriesoft.sigmatherm.entity.Synchronization;
+import com.ludogoriesoft.sigmatherm.model.Synchronization;
 import com.ludogoriesoft.sigmatherm.service.SynchronizationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

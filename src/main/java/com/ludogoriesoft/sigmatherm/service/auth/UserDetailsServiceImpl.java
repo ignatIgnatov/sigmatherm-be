@@ -1,6 +1,6 @@
 package com.ludogoriesoft.sigmatherm.service.auth;
 
-import com.ludogoriesoft.sigmatherm.entity.User;
+import com.ludogoriesoft.sigmatherm.model.User;
 import com.ludogoriesoft.sigmatherm.helper.UserPrincipal;
 import com.ludogoriesoft.sigmatherm.repository.UserRepository;
 import org.springframework.security.core.userdetails.UserDetails;
