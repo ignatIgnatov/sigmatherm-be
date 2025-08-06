@@ -47,8 +47,8 @@ public class MicroinvestService {
             if (!orders.isEmpty()) {
                 Synchronization sync = synchronizationService.createSync(Platform.Microinvest);
                 for (OperationDto order : orders) {
-                    productService.reduceAvailabilityByOrder(order.getGood_id(), order.getQtty());
-                    productService.setSync(order.getGood_id(), sync);
+                    productService.reduceAvailabilityByOrder(order.getGoodId(), order.getQuantity());
+                    productService.setSync(order.getGoodId(), sync);
                 }
             }
         });
@@ -60,8 +60,8 @@ public class MicroinvestService {
             if (!returns.isEmpty()) {
                 Synchronization sync = synchronizationService.createSync(Platform.Microinvest);
                 for (OperationDto operation : returns) {
-                    productService.increaseAvailabilityByReturn(operation.getGood_id(), operation.getQtty());
-                    productService.setSync(operation.getGood_id(), sync);
+                    productService.increaseAvailabilityByReturn(operation.getGoodId(), operation.getQuantity());
+                    productService.setSync(operation.getGoodId(), sync);
                 }
             }
         });
@@ -180,31 +180,31 @@ public class MicroinvestService {
 
     private OperationDto createDeliveryRequest(String productId, Integer quantity) {
         OperationDto operationDto = new OperationDto();
-        operationDto.setOperation_type(1);
-        operationDto.setGood_id(productId);
-        operationDto.setPartner_id(String.valueOf(2));
-        operationDto.setObject_id(String.valueOf(2));
-        operationDto.setOperator_id(String.valueOf(2));
-        operationDto.setQtty(quantity);
+        operationDto.setOperationType(1);
+        operationDto.setGoodId(productId);
+        operationDto.setPartnerId(String.valueOf(2));
+        operationDto.setObjectId(String.valueOf(2));
+        operationDto.setOperatorId(String.valueOf(2));
+        operationDto.setQuantity(quantity);
         operationDto.setSign(1);
         operationDto.setDate(LocalDateTime.now());
         operationDto.setNote("Автоматична доставка от Sigmatherm web-server");
-        operationDto.setUser_id(8L);
+        operationDto.setUserId(8L);
         return operationDto;
     }
 
     private OperationDto createSaleRequest(String productId, Integer quantity) {
         OperationDto operationDto = new OperationDto();
-        operationDto.setOperation_type(2);
-        operationDto.setGood_id(productId);
-        operationDto.setPartner_id(String.valueOf(2));
-        operationDto.setObject_id(String.valueOf(2));
-        operationDto.setOperator_id(String.valueOf(2));
-        operationDto.setQtty(quantity);
+        operationDto.setOperationType(2);
+        operationDto.setGoodId(productId);
+        operationDto.setPartnerId(String.valueOf(2));
+        operationDto.setObjectId(String.valueOf(2));
+        operationDto.setOperatorId(String.valueOf(2));
+        operationDto.setQuantity(quantity);
         operationDto.setSign(-1);
         operationDto.setDate(LocalDateTime.now());
         operationDto.setNote("Автоматична продажба от Sigmatherm web-server");
-        operationDto.setUser_id(8L);
+        operationDto.setUserId(8L);
         return operationDto;
     }
 }
