@@ -89,17 +89,17 @@ public class CronJobService {
 
            for (Product product : products) {
                // To Emag stores
-               emagService.processStockUpdateToEmag(emagBgUrl, product.getId(), product.getStock());
-               emagService.processStockUpdateToEmag(emagRoUrl, product.getId(), product.getStock());
-               emagService.processStockUpdateToEmag(emagHuUrl, product.getId(), product.getStock());
+//               emagService.processStockUpdateToEmag(emagBgUrl, product.getId(), product.getStock());
+//               emagService.processStockUpdateToEmag(emagRoUrl, product.getId(), product.getStock());
+//               emagService.processStockUpdateToEmag(emagHuUrl, product.getId(), product.getStock());
 
                // To Bol.com store
                // TODO: Here porductId must be replaced with offerId
-               bolService.processStockUpdateToBol(product.getId(), product.getStock());
+//               bolService.processStockUpdateToBol(product.getId(), product.getStock());
            }
 
            // To Skroutz.gr store
-           skroutzFeedService.processStockUpdateToSkroutz(new File(FEED_PATH), products);
+//           skroutzFeedService.processStockUpdateToSkroutz(new File(FEED_PATH), products);
 
            // To Microinvest store
            // TODO:

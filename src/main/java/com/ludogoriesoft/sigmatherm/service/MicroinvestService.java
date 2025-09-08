@@ -16,6 +16,7 @@ import reactor.core.publisher.Mono;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -42,7 +43,8 @@ public class MicroinvestService {
     }
 
     public void processMicroinvestOrders(LocalDate from, LocalDate to) {
-        LocalDate today = LocalDate.now();
+        ZoneId zone = ZoneId.of("Europe/Sofia");
+        LocalDate today = LocalDate.now(zone).minusDays(1);
         fetchOperationsFromMicroinvestApi(SALE_OPERATION_TYPE, from, to).ifPresent(orders -> {
             if (!orders.isEmpty()) {
                 Synchronization sync = synchronizationService.createSync(Platform.Microinvest);
@@ -55,7 +57,8 @@ public class MicroinvestService {
     }
 
     public void processMicroinvestReturns(LocalDate from, LocalDate to) {
-        LocalDate today = LocalDate.now();
+        ZoneId zone = ZoneId.of("Europe/Sofia");
+        LocalDate today = LocalDate.now(zone).minusDays(1);
         fetchOperationsFromMicroinvestApi(STORNO_OPERATION_TYPE, from, to).ifPresent(returns -> {
             if (!returns.isEmpty()) {
                 Synchronization sync = synchronizationService.createSync(Platform.Microinvest);

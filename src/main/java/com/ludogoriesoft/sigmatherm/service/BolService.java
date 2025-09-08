@@ -5,10 +5,10 @@ import com.ludogoriesoft.sigmatherm.dto.bol.ReturnsResponse;
 import com.ludogoriesoft.sigmatherm.dto.bol.ShipmentResponse;
 import com.ludogoriesoft.sigmatherm.dto.bol.StockUpdateRequest;
 import com.ludogoriesoft.sigmatherm.dto.bol.TokenResponse;
+import com.ludogoriesoft.sigmatherm.exception.ObjectNotFoundException;
 import com.ludogoriesoft.sigmatherm.model.Product;
 import com.ludogoriesoft.sigmatherm.model.Synchronization;
 import com.ludogoriesoft.sigmatherm.model.enums.Platform;
-import com.ludogoriesoft.sigmatherm.exception.ObjectNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,6 +20,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
 import java.time.OffsetDateTime;
+import java.time.ZoneId;
 import java.util.Base64;
 import java.util.List;
 
@@ -259,7 +260,8 @@ public class BolService {
     }
 
     private static List<ShipmentResponse.Shipment> getTodayShipments(ShipmentResponse response) {
-        OffsetDateTime startOfToday = OffsetDateTime.now()
+        ZoneId zone = ZoneId.of("Europe/Sofia");
+        OffsetDateTime startOfToday = OffsetDateTime.now(zone).minusDays(1)
                 .toLocalDate()
                 .atStartOfDay()
                 .atOffset(OffsetDateTime.now().getOffset());
@@ -275,7 +277,8 @@ public class BolService {
     }
 
     private static List<ReturnsResponse.Return> getTodayReturns(ReturnsResponse response) {
-        OffsetDateTime startOfToday = OffsetDateTime.now()
+        ZoneId zone = ZoneId.of("Europe/Sofia");
+        OffsetDateTime startOfToday = OffsetDateTime.now(zone).minusDays(1)
                 .toLocalDate()
                 .atStartOfDay()
                 .atOffset(OffsetDateTime.now().getOffset());

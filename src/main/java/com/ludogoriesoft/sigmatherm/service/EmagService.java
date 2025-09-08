@@ -181,7 +181,7 @@ public class EmagService {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
 
         ZoneId zone = ZoneId.of("Europe/Sofia");
-        LocalDate today = LocalDate.now(zone);
+        LocalDate today = LocalDate.now(zone).minusDays(1);
 
         LocalDateTime startTime = today.atStartOfDay();
         LocalDateTime endTime = today.atTime(23, 59, 59);
@@ -212,7 +212,7 @@ public class EmagService {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
 
         ZoneId zone = ZoneId.of("Europe/Sofia");
-        LocalDate today = LocalDate.now(zone);
+        LocalDate today = LocalDate.now(zone).minusDays(1);
 
         LocalDateTime startTime = today.atStartOfDay();
         LocalDateTime endTime = today.atTime(23, 59, 59);
