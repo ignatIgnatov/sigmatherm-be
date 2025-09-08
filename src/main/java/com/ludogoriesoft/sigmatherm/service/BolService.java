@@ -7,8 +7,11 @@ import com.ludogoriesoft.sigmatherm.dto.bol.StockUpdateRequest;
 import com.ludogoriesoft.sigmatherm.dto.bol.TokenResponse;
 import com.ludogoriesoft.sigmatherm.exception.ObjectNotFoundException;
 import com.ludogoriesoft.sigmatherm.model.Product;
+import com.ludogoriesoft.sigmatherm.model.SyncLog;
 import com.ludogoriesoft.sigmatherm.model.Synchronization;
 import com.ludogoriesoft.sigmatherm.model.enums.Platform;
+import com.ludogoriesoft.sigmatherm.model.enums.SyncDirection;
+import com.ludogoriesoft.sigmatherm.model.enums.SyncOperation;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -37,107 +40,216 @@ public class BolService {
 
     private final ProductService productService;
     private final SynchronizationService synchronizationService;
+    private final SyncLogService syncLogService;
     private final WebClient webClient = WebClient.create("https://api.bol.com");
 
     private static final String ACCEPT_HEADER = "application/vnd.retailer.v10+json";
 
     public void processStockUpdateToBol(String offerId, int stock) {
-        String token = getAccessToken();
-        updateSingleStockToBol(token, offerId, stock);
+        boolean success = false;
+        String errorMessage = null;
+
+        try {
+            String token = getAccessToken();
+            updateSingleStockToBol(token, offerId, stock);
+            success = true;
+        } catch (Exception e) {
+            errorMessage = e.getMessage();
+            log.error("Failed to update stock for offer {} to BOL", offerId, e);
+        }
+
+        syncLogService.logSingleOperation(
+                Platform.Bol,
+                SyncDirection.OUTBOUND,
+                SyncOperation.STOCK_UPDATE,
+                null,
+                success,
+                String.format("Stock update for offer %s to %d", offerId, stock),
+                errorMessage
+        );
     }
 
     public List<ShipmentResponse.Shipment> processShipments() {
-        String accessToken = obtainAccessToken();
-        ShipmentResponse response = fetchShipments(accessToken).block();
-
-        if (response == null || response.getShipments() == null || response.getShipments().isEmpty()) {
-            log.info("No shipments found in the response");
-            return List.of();
-        }
-
-        List<ShipmentResponse.Shipment> todayShipments = getTodayShipments(response);
-
-        log.info("Processing {} shipments for today", todayShipments.size());
-        if (todayShipments.isEmpty()) {
-            return response.getShipments(); //Only for testing
-        }
-
+        String batchId = "bol-shipments-" + System.currentTimeMillis();
         Synchronization synchronization = synchronizationService.createSync(Platform.Bol);
-        for (ShipmentResponse.Shipment shipment : todayShipments) {
-            try {
-                Thread.sleep(1200);
-                ShipmentResponse.Shipment currentShipment = fetchShipmentById(accessToken, shipment.getShipmentId()).block();
-                if (currentShipment == null || currentShipment.getShipmentItems() == null || currentShipment.getShipmentItems().isEmpty()) {
-                    log.info("No shipment items in shipment {}", shipment.getShipmentId());
-                    return List.of();
-                }
 
-                for (ShipmentResponse.ShipmentItem item : currentShipment.getShipmentItems()) {
-                    log.info("Item reference: {}", item.getOffer().getReference());
-                    log.info("Item offer id: {}", item.getOffer().getOfferId());
-                    reduceAvailabilityOfShippedItems(shipment, item.getOffer().getReference(), item.getQuantity(), synchronization);
-                    Product product = productService.findProductById(item.getOffer().getReference());
-                    updateSingleStockToBol(accessToken, item.getOffer().getOfferId(), product.getStock());
-                }
+        SyncLog syncLog = syncLogService.startSync(
+                Platform.Bol,
+                SyncDirection.INBOUND,
+                SyncOperation.ORDERS,
+                synchronization,
+                batchId
+        );
 
-            } catch (Exception e) {
-                Thread.currentThread().interrupt();
-                log.error("Error processing shipment {}", shipment.getShipmentId(), e);
+        int processedItems = 0;
+        int successfulItems = 0;
+        int failedItems = 0;
+
+        try {
+            String accessToken = obtainAccessToken();
+            ShipmentResponse response = fetchShipments(accessToken).block();
+
+            if (response == null || response.getShipments() == null || response.getShipments().isEmpty()) {
+                log.info("No shipments found in the response");
+                syncLogService.completeSync(syncLog.getId(), 0, 0, 0, "No shipments found");
+                return List.of();
             }
-        }
 
-        log.info(synchronization.getPlatform() + " synchronized successfully!");
-        return response.getShipments();
+            List<ShipmentResponse.Shipment> todayShipments = getTodayShipments(response);
+            log.info("Processing {} shipments for today", todayShipments.size());
+
+            if (todayShipments.isEmpty()) {
+                syncLogService.completeSync(syncLog.getId(), 0, 0, 0, "No shipments for today");
+                return response.getShipments(); // Only for testing
+            }
+
+            for (ShipmentResponse.Shipment shipment : todayShipments) {
+                try {
+                    Thread.sleep(1200);
+                    ShipmentResponse.Shipment currentShipment = fetchShipmentById(accessToken, shipment.getShipmentId()).block();
+
+                    if (currentShipment == null || currentShipment.getShipmentItems() == null || currentShipment.getShipmentItems().isEmpty()) {
+                        log.info("No shipment items in shipment {}", shipment.getShipmentId());
+                        failedItems++;
+                        continue;
+                    }
+
+                    for (ShipmentResponse.ShipmentItem item : currentShipment.getShipmentItems()) {
+                        processedItems++;
+                        try {
+                            log.info("Item reference: {}", item.getOffer().getReference());
+                            log.info("Item offer id: {}", item.getOffer().getOfferId());
+
+                            reduceAvailabilityOfShippedItems(shipment, item.getOffer().getReference(), item.getQuantity(), synchronization);
+                            Product product = productService.findProductById(item.getOffer().getReference());
+                            updateSingleStockToBol(accessToken, item.getOffer().getOfferId(), product.getStock());
+
+                            successfulItems++;
+
+                            // Update progress periodically
+                            if (processedItems % 10 == 0) {
+                                syncLogService.updateProgress(syncLog.getId(), processedItems, successfulItems, failedItems,
+                                        String.format("Processed %d/%d shipment items", processedItems, todayShipments.size()));
+                            }
+
+                        } catch (Exception e) {
+                            failedItems++;
+                            log.error("Error processing shipment item {}", item.getOffer().getReference(), e);
+                        }
+                    }
+
+                } catch (Exception e) {
+                    Thread.currentThread().interrupt();
+                    failedItems++;
+                    log.error("Error processing shipment {}", shipment.getShipmentId(), e);
+                }
+            }
+
+            syncLogService.completeSync(syncLog.getId(), processedItems, successfulItems, failedItems,
+                    String.format("Processed %d shipments with %d items total", todayShipments.size(), processedItems));
+
+            log.info(synchronization.getPlatform() + " synchronized successfully!");
+            return response.getShipments();
+
+        } catch (Exception e) {
+            syncLogService.failSync(syncLog.getId(), e.getMessage(), processedItems, successfulItems, failedItems);
+            log.error("Failed to process BOL shipments", e);
+            throw new RuntimeException("Failed to process BOL shipments", e);
+        }
     }
 
     public List<ReturnsResponse.Return> processReturns() {
-        String accessToken = obtainAccessToken();
-        ReturnsResponse response = fetchReturns(accessToken).block();
-
-        if (response == null || response.getReturns() == null || response.getReturns().isEmpty()) {
-            log.info("No returns found in the response");
-            return List.of();
-        }
-
-        List<ReturnsResponse.Return> todayReturns = getTodayReturns(response);
-
-        log.info("Processing {} returns for today", todayReturns.size());
-        if (todayReturns.isEmpty()) {
-            return response.getReturns(); //Only for testing
-        }
-
+        String batchId = "bol-returns-" + System.currentTimeMillis();
         Synchronization synchronization = synchronizationService.createSync(Platform.Bol);
-        for (ReturnsResponse.Return currentReturn : todayReturns) {
-            try {
-                Thread.sleep(1200);
-                if (currentReturn.getReturnItems() == null || currentReturn.getReturnItems().isEmpty()) {
-                    log.info("No items found in return {}", currentReturn.getReturnId());
-                    return List.of();
-                }
 
-                for (ReturnsResponse.ReturnItem returnItem : currentReturn.getReturnItems()) {
-                    OrderResponse order = fetchOrderById(accessToken, returnItem.getOrderId()).block();
-                    if (order == null || order.getOrderItems() == null || order.getOrderItems().isEmpty()) {
-                        log.info("No orders found in return {}", currentReturn.getReturnId());
-                        return List.of();
-                    }
+        SyncLog syncLog = syncLogService.startSync(
+                Platform.Bol,
+                SyncDirection.INBOUND,
+                SyncOperation.RETURNS,
+                synchronization,
+                batchId
+        );
 
-                    boolean returnReceived = checkHandlingResultByReturn(returnItem);
-                    if (!returnReceived) {
-                        log.info("No RETURN_RECEIVED handling result found in return {}", currentReturn.getReturnId());
-                        return List.of();
-                    }
+        int processedItems = 0;
+        int successfulItems = 0;
+        int failedItems = 0;
 
-                    reduceAvailabilityOfReturnedItem(currentReturn, returnItem, order, accessToken, synchronization);
-                }
-            } catch (Exception e) {
-                Thread.currentThread().interrupt();
-                log.error("Error processing shipment {}", currentReturn.getReturnId(), e);
+        try {
+            String accessToken = obtainAccessToken();
+            ReturnsResponse response = fetchReturns(accessToken).block();
+
+            if (response == null || response.getReturns() == null || response.getReturns().isEmpty()) {
+                log.info("No returns found in the response");
+                syncLogService.completeSync(syncLog.getId(), 0, 0, 0, "No returns found");
+                return List.of();
             }
-        }
 
-        log.info(synchronization.getPlatform() + " synchronized successfully!");
-        return response.getReturns();
+            List<ReturnsResponse.Return> todayReturns = getTodayReturns(response);
+            log.info("Processing {} returns for today", todayReturns.size());
+
+            if (todayReturns.isEmpty()) {
+                syncLogService.completeSync(syncLog.getId(), 0, 0, 0, "No returns for today");
+                return response.getReturns(); // Only for testing
+            }
+
+            for (ReturnsResponse.Return currentReturn : todayReturns) {
+                try {
+                    Thread.sleep(1200);
+                    if (currentReturn.getReturnItems() == null || currentReturn.getReturnItems().isEmpty()) {
+                        log.info("No items found in return {}", currentReturn.getReturnId());
+                        failedItems++;
+                        continue;
+                    }
+
+                    for (ReturnsResponse.ReturnItem returnItem : currentReturn.getReturnItems()) {
+                        processedItems++;
+                        try {
+                            OrderResponse order = fetchOrderById(accessToken, returnItem.getOrderId()).block();
+                            if (order == null || order.getOrderItems() == null || order.getOrderItems().isEmpty()) {
+                                log.info("No orders found in return {}", currentReturn.getReturnId());
+                                failedItems++;
+                                continue;
+                            }
+
+                            boolean returnReceived = checkHandlingResultByReturn(returnItem);
+                            if (!returnReceived) {
+                                log.info("No RETURN_RECEIVED handling result found in return {}", currentReturn.getReturnId());
+                                failedItems++;
+                                continue;
+                            }
+
+                            reduceAvailabilityOfReturnedItem(currentReturn, returnItem, order, accessToken, synchronization);
+                            successfulItems++;
+
+                            // Update progress periodically
+                            if (processedItems % 10 == 0) {
+                                syncLogService.updateProgress(syncLog.getId(), processedItems, successfulItems, failedItems,
+                                        String.format("Processed %d/%d return items", processedItems, todayReturns.size()));
+                            }
+
+                        } catch (Exception e) {
+                            failedItems++;
+                            log.error("Error processing return item", e);
+                        }
+                    }
+                } catch (Exception e) {
+                    Thread.currentThread().interrupt();
+                    failedItems++;
+                    log.error("Error processing return {}", currentReturn.getReturnId(), e);
+                }
+            }
+
+            syncLogService.completeSync(syncLog.getId(), processedItems, successfulItems, failedItems,
+                    String.format("Processed %d returns with %d items total", todayReturns.size(), processedItems));
+
+            log.info(synchronization.getPlatform() + " synchronized successfully!");
+            return response.getReturns();
+
+        } catch (Exception e) {
+            syncLogService.failSync(syncLog.getId(), e.getMessage(), processedItems, successfulItems, failedItems);
+            log.error("Failed to process BOL returns", e);
+            throw new RuntimeException("Failed to process BOL returns", e);
+        }
     }
 
     private String obtainAccessToken() {
