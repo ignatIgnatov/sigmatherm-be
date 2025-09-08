@@ -8,12 +8,12 @@ import com.ludogoriesoft.sigmatherm.dto.emag.EmagProduct;
 import com.ludogoriesoft.sigmatherm.dto.emag.EmagReturnedOrdersResponse;
 import com.ludogoriesoft.sigmatherm.dto.emag.EmagReturnedProduct;
 import com.ludogoriesoft.sigmatherm.dto.emag.EmagReturnedResult;
-import com.ludogoriesoft.sigmatherm.exception.EmagException;
 import com.ludogoriesoft.sigmatherm.model.SyncLog;
 import com.ludogoriesoft.sigmatherm.model.Synchronization;
 import com.ludogoriesoft.sigmatherm.model.enums.Platform;
 import com.ludogoriesoft.sigmatherm.model.enums.SyncDirection;
 import com.ludogoriesoft.sigmatherm.model.enums.SyncOperation;
+import com.ludogoriesoft.sigmatherm.exception.EmagException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -61,7 +61,6 @@ public class EmagService {
 
     public void processStockUpdateToEmag(String url, String productId, int stock) {
         Platform platform = determinePlatformFromUrl(url);
-
         boolean success = false;
         String errorMessage = null;
 
@@ -81,7 +80,13 @@ public class EmagService {
 
             if (response.getStatusCode().is2xxSuccessful()) {
                 success = true;
-                log.info("{} stock updated successfully for product {}", platform, productId);
+                String emagNationality = url.substring(url.length() - 3);
+                switch (emagNationality) {
+                    case ".bg" -> log.info("Emag BG updated successfully!");
+                    case ".ro" -> log.info("Emag RO updated successfully!");
+                    case ".hu" -> log.info("Emag HU updated successfully!");
+                    default -> log.info("Emag updated successfully!");
+                }
             }
         } catch (Exception e) {
             errorMessage = e.getMessage();
@@ -98,86 +103,6 @@ public class EmagService {
                 String.format("Stock update for product %s to %d", productId, stock),
                 errorMessage
         );
-    }
-
-    public void fetchEmagOrders(String url, Synchronization synchronization, Synchronization lastSync) throws EmagException {
-        Platform platform = determinePlatformFromUrl(url);
-        String batchId = platform.name().toLowerCase() + "-orders-" + System.currentTimeMillis();
-
-        SyncLog syncLog = syncLogService.startSync(
-                platform,
-                SyncDirection.INBOUND,
-                SyncOperation.ORDERS,
-                synchronization,
-                batchId
-        );
-
-        int totalProcessed = 0;
-        int totalSuccessful = 0;
-        int totalFailed = 0;
-
-        try {
-            EmagOrdersCountResponse ordersCountResponse = getEmagOrdersCountResponse(url + COUNT_PATH, lastSync);
-
-            if (ordersCountResponse.isError()) {
-                String errorMsg = ordersCountResponse.getMessages().get(0);
-                log.warn(errorMsg);
-                syncLogService.failSync(syncLog.getId(), errorMsg, 0, 0, 0);
-                throw new EmagException(errorMsg);
-            }
-
-            EmagOrdersCount ordersCount = ordersCountResponse.getResults();
-            int totalPages = ordersCount.getNoOfPages();
-
-            log.info("Processing {} pages of orders from {}", totalPages, platform);
-
-            for (int i = 1; i <= totalPages; i++) {
-                try {
-                    EmagOrdersResponse response = getEmagOrdersResponse(url + READ_PATH, i, lastSync);
-
-                    if (response.isError()) {
-                        String errorMsg = response.getMessages().get(0);
-                        log.warn("Error on page {}: {}", i, errorMsg);
-                        totalFailed++;
-                        continue;
-                    }
-
-                    for (EmagOrder order : response.getResults()) {
-                        for (EmagProduct product : order.getProducts()) {
-                            try {
-                                productService.reduceAvailabilityByOrder(product.getProduct_id(), product.getQuantity());
-                                productService.setSync(product.getProduct_id(), synchronization);
-                                totalSuccessful++;
-                            } catch (Exception e) {
-                                totalFailed++;
-                                log.error("Failed to process product {} in order", product.getProduct_id(), e);
-                            }
-                            totalProcessed++;
-                        }
-                    }
-
-                    // Update progress after each page
-                    syncLogService.updateProgress(syncLog.getId(), totalProcessed, totalSuccessful, totalFailed,
-                            String.format("Processed page %d/%d", i, totalPages));
-
-                } catch (Exception e) {
-                    log.error("Error processing page {} from {}", i, platform, e);
-                    totalFailed++;
-                }
-            }
-
-            // Complete the sync
-            String details = String.format("Processed %d pages, %d products total", totalPages, totalProcessed);
-            syncLogService.completeSync(syncLog.getId(), totalProcessed, totalSuccessful, totalFailed, details);
-
-            log.info("{} orders synchronized successfully! Processed: {}, Successful: {}, Failed: {}",
-                    platform, totalProcessed, totalSuccessful, totalFailed);
-
-        } catch (Exception e) {
-            syncLogService.failSync(syncLog.getId(), e.getMessage(), totalProcessed, totalSuccessful, totalFailed);
-            log.error("Failed to fetch {} orders", platform, e);
-            throw e;
-        }
     }
 
     public void fetchReturnedEmagOrders(String url, Synchronization lastSync, Synchronization currentSync) {
@@ -204,6 +129,7 @@ public class EmagService {
 
                 for (EmagReturnedResult result : ordersResponse.getResults()) {
                     for (EmagReturnedProduct product : result.getProducts()) {
+                        totalProcessed++;
                         try {
                             String productId = product.getProduct_id();
                             int quantity = product.getQuantity();
@@ -212,22 +138,25 @@ public class EmagService {
                             productService.setSync(productId, currentSync);
                             totalSuccessful++;
 
+                            log.debug("Processed returned product {}: {} units", productId, quantity);
+
                         } catch (Exception e) {
                             totalFailed++;
                             log.error("Failed to process returned product {}", product.getProduct_id(), e);
                         }
-                        totalProcessed++;
-                    }
 
-                    // Update progress periodically
-                    if (totalProcessed % 10 == 0) {
-                        syncLogService.updateProgress(syncLog.getId(), totalProcessed, totalSuccessful, totalFailed,
-                                String.format("Processed %d returned products", totalProcessed));
+                        // Update progress every 10 items
+                        if (totalProcessed % 10 == 0) {
+                            syncLogService.updateProgress(syncLog.getId(), totalProcessed, totalSuccessful, totalFailed,
+                                    String.format("Processed %d returned products", totalProcessed));
+                        }
                     }
                 }
+            } else {
+                log.info("No returned orders found for {}", platform);
             }
 
-            String details = String.format("Processed %d returned products", totalProcessed);
+            String details = String.format("Processed %d returned products from %s", totalProcessed, platform);
             syncLogService.completeSync(syncLog.getId(), totalProcessed, totalSuccessful, totalFailed, details);
 
             log.info("{} returns synchronized successfully! Processed: {}, Successful: {}, Failed: {}",
@@ -236,6 +165,98 @@ public class EmagService {
         } catch (Exception e) {
             syncLogService.failSync(syncLog.getId(), e.getMessage(), totalProcessed, totalSuccessful, totalFailed);
             log.error("Failed to fetch {} returns", platform, e);
+            throw new RuntimeException("Failed to fetch " + platform + " returns", e);
+        }
+    }
+
+    public void fetchEmagOrders(String url, Synchronization synchronization, Synchronization lastSync) throws EmagException {
+        Platform platform = determinePlatformFromUrl(url);
+        String batchId = platform.name().toLowerCase() + "-orders-" + System.currentTimeMillis();
+
+        SyncLog syncLog = syncLogService.startSync(
+                platform,
+                SyncDirection.INBOUND,
+                SyncOperation.ORDERS,
+                synchronization,
+                batchId
+        );
+
+        int totalProcessed = 0;
+        int totalSuccessful = 0;
+        int totalFailed = 0;
+
+        try {
+            // Get order count first
+            EmagOrdersCountResponse ordersCountResponse = getEmagOrdersCountResponse(url + COUNT_PATH, lastSync);
+
+            if (ordersCountResponse.isError()) {
+                String errorMsg = ordersCountResponse.getMessages().get(0);
+                log.warn("{} order count error: {}", platform, errorMsg);
+                syncLogService.failSync(syncLog.getId(), errorMsg, 0, 0, 0);
+                throw new EmagException(errorMsg);
+            }
+
+            EmagOrdersCount ordersCount = ordersCountResponse.getResults();
+            int totalPages = ordersCount.getNoOfPages();
+
+            log.info("Processing {} pages of orders from {}", totalPages, platform);
+
+            // Process each page
+            for (int i = 1; i <= totalPages; i++) {
+                try {
+                    EmagOrdersResponse response = getEmagOrdersResponse(url + READ_PATH, i, lastSync);
+
+                    if (response.isError()) {
+                        String errorMsg = response.getMessages().get(0);
+                        log.warn("Error on page {} for {}: {}", i, platform, errorMsg);
+                        totalFailed++;
+                        continue;
+                    }
+
+                    // Process orders on this page
+                    for (EmagOrder order : response.getResults()) {
+                        for (EmagProduct product : order.getProducts()) {
+                            totalProcessed++;
+                            try {
+                                productService.reduceAvailabilityByOrder(product.getProduct_id(), product.getQuantity());
+                                productService.setSync(product.getProduct_id(), synchronization);
+                                totalSuccessful++;
+
+                                log.debug("Processed order product {}: {} units", product.getProduct_id(), product.getQuantity());
+
+                            } catch (Exception e) {
+                                totalFailed++;
+                                log.error("Failed to process product {} in order from {}", product.getProduct_id(), platform, e);
+                            }
+                        }
+                    }
+
+                    // Update progress after each page
+                    syncLogService.updateProgress(syncLog.getId(), totalProcessed, totalSuccessful, totalFailed,
+                            String.format("Processed page %d/%d (%d products so far)", i, totalPages, totalProcessed));
+
+                    log.debug("Completed page {}/{} for {}", i, totalPages, platform);
+
+                } catch (Exception e) {
+                    log.error("Error processing page {} from {}", i, platform, e);
+                    totalFailed++;
+                }
+            }
+
+            // Complete the sync
+            String details = String.format("Processed %d pages with %d products from %s", totalPages, totalProcessed, platform);
+            syncLogService.completeSync(syncLog.getId(), totalProcessed, totalSuccessful, totalFailed, details);
+
+            log.info("{} orders synchronized successfully! Pages: {}, Products: {}, Successful: {}, Failed: {}",
+                    platform, totalPages, totalProcessed, totalSuccessful, totalFailed);
+
+        } catch (EmagException e) {
+            // Re-throw EmagException as-is
+            throw e;
+        } catch (Exception e) {
+            syncLogService.failSync(syncLog.getId(), e.getMessage(), totalProcessed, totalSuccessful, totalFailed);
+            log.error("Failed to fetch {} orders", platform, e);
+            throw new EmagException("Failed to fetch " + platform + " orders: " + e.getMessage());
         }
     }
 
@@ -243,14 +264,13 @@ public class EmagService {
         if (url.contains(".bg")) return Platform.eMagBg;
         if (url.contains(".ro")) return Platform.eMagRo;
         if (url.contains(".hu")) return Platform.eMagHu;
-        return Platform.eMagBg; // default
+        return Platform.eMagBg; // default fallback
     }
 
+    // Keep all existing private methods unchanged
     private EmagOrdersResponse getEmagOrdersResponse(String url, int page, Synchronization lastSync) {
         HttpHeaders headers = getHeaders();
-
         MultiValueMap<String, String> body = getOrdersRequestBody(page, lastSync);
-
         HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(body, headers);
 
         ResponseEntity<EmagOrdersResponse> response =
@@ -260,14 +280,11 @@ public class EmagService {
 
     private EmagReturnedOrdersResponse getEmagReturnedOrdersResponse(String url, Synchronization lastSync) {
         HttpHeaders headers = getHeaders();
-
         MultiValueMap<String, String> body = getReturnedOrdersRequestBody(lastSync);
-
         HttpEntity<MultiValueMap<String, String>> entity = new HttpEntity<>(body, headers);
 
         ResponseEntity<EmagReturnedOrdersResponse> response =
                 restTemplate.exchange(url, HttpMethod.GET, entity, EmagReturnedOrdersResponse.class);
-
         return response.getBody();
     }
 
@@ -294,9 +311,7 @@ public class EmagService {
         return TOKEN_PREFIX + new String(encodedAuth);
     }
 
-    private static MultiValueMap<String, String> getOrdersRequestBody(
-            int page, Synchronization lastSync) {
-
+    private static MultiValueMap<String, String> getOrdersRequestBody(int page, Synchronization lastSync) {
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
 
         ZoneId zone = ZoneId.of("Europe/Sofia");
@@ -327,7 +342,6 @@ public class EmagService {
     }
 
     private static MultiValueMap<String, String> getReturnedOrdersRequestBody(Synchronization lastSync) {
-
         MultiValueMap<String, String> body = new LinkedMultiValueMap<>();
 
         ZoneId zone = ZoneId.of("Europe/Sofia");

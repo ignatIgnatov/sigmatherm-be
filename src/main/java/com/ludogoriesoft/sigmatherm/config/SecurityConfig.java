@@ -48,6 +48,12 @@ public class SecurityConfig {
                         auth -> auth
                                 .requestMatchers("/api/auth/**").permitAll()
                                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                                .requestMatchers(
+                                        "/swagger-ui.html",
+                                        "/swagger-ui/**",
+                                        "/v3/api-docs/**",
+                                        "/v3/api-docs.yaml"
+                                ).permitAll()
                                 .requestMatchers(MAGENTO_URL).authenticated()
                                 .requestMatchers(SKROUTZ_WEBHOOK_URI).permitAll()
                                 .requestMatchers(SKROUTZ_FEED_URL).permitAll()
