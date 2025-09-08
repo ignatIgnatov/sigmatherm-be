@@ -14,16 +14,14 @@ import java.util.List;
 public interface ProductRepository extends JpaRepository<Product, String> {
     @Query(value = "SELECT p.* FROM product p " +
             "JOIN synchronization s ON p.synchronization_id = s.id " +
-            "WHERE DATE(s.read_date) = CURRENT_DATE",
+            "WHERE DATE(s.read_date) = CURRENT_DATE - INTERVAL '1 day'",
             nativeQuery = true)
-    List<Product> findAllProductsSynchronizedToday();
-
-    Page<Product> findByNameContainingIgnoreCase(String name, Pageable pageable);
+    List<Product> findAllProductsSynchronizedYesterday();
 
     @Query("""
-    SELECT p FROM Product p 
-    WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :term, '%')) 
-       OR LOWER(p.id) LIKE LOWER(CONCAT('%', :term, '%')) 
-""")
+                SELECT p FROM Product p 
+                WHERE LOWER(p.name) LIKE LOWER(CONCAT('%', :term, '%')) 
+                   OR LOWER(p.id) LIKE LOWER(CONCAT('%', :term, '%')) 
+            """)
     Page<Product> findByNameOrId(@Param("term") String term, Pageable pageable);
 }

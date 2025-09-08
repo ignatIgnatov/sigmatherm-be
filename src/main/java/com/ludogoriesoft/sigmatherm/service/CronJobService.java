@@ -8,7 +8,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -78,37 +77,37 @@ public class CronJobService {
     public void updateStockToStores() throws Exception {
         List<Product> products = productService.getAllProductsSynchronizedToday();
 
-       if (!products.isEmpty()) {
-           Synchronization emagBgSync = synchronizationService.createSync(Platform.eMagBg);
-           Synchronization emagRoSync = synchronizationService.createSync(Platform.eMagRo);
-           Synchronization emagHuSync = synchronizationService.createSync(Platform.eMagHu);
-           Synchronization skroutzSync = synchronizationService.createSync(Platform.Skroutz);
-           Synchronization magentoSync = synchronizationService.createSync(Platform.Magento);
-           Synchronization bolSync = synchronizationService.createSync(Platform.Bol);
-           Synchronization microinvestSync = synchronizationService.createSync(Platform.Microinvest);
+        if (!products.isEmpty()) {
+            Synchronization emagBgSync = synchronizationService.createSync(Platform.eMagBg);
+            Synchronization emagRoSync = synchronizationService.createSync(Platform.eMagRo);
+            Synchronization emagHuSync = synchronizationService.createSync(Platform.eMagHu);
+            Synchronization skroutzSync = synchronizationService.createSync(Platform.Skroutz);
+            Synchronization magentoSync = synchronizationService.createSync(Platform.Magento);
+            Synchronization bolSync = synchronizationService.createSync(Platform.Bol);
+            Synchronization microinvestSync = synchronizationService.createSync(Platform.Microinvest);
 
-           for (Product product : products) {
-               // To Emag stores
+            for (Product product : products) {
+                // To Emag stores
 //               emagService.processStockUpdateToEmag(emagBgUrl, product.getId(), product.getStock());
 //               emagService.processStockUpdateToEmag(emagRoUrl, product.getId(), product.getStock());
 //               emagService.processStockUpdateToEmag(emagHuUrl, product.getId(), product.getStock());
 
-               // To Bol.com store
-               // TODO: Here porductId must be replaced with offerId
+                // To Bol.com store
+                // TODO: Here porductId must be replaced with offerId
 //               bolService.processStockUpdateToBol(product.getId(), product.getStock());
-           }
+            }
 
-           // To Skroutz.gr store
+            // To Skroutz.gr store
 //           skroutzFeedService.processStockUpdateToSkroutz(new File(FEED_PATH), products);
 
-           // To Microinvest store
-           // TODO:
+            // To Microinvest store
+            // TODO:
 
 
-           for(Platform platform : Platform.values()) {
-               Synchronization synchronization = synchronizationService.createSync(platform);
-               synchronization.setWriteDate(LocalDateTime.now());
-           }
-       }
+            for (Platform platform : Platform.values()) {
+                Synchronization synchronization = synchronizationService.createSync(platform);
+                synchronization.setWriteDate(LocalDateTime.now());
+            }
+        }
     }
 }

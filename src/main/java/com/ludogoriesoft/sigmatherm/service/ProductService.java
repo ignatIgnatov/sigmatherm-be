@@ -95,7 +95,7 @@ public class ProductService {
     }
 
     public List<Product> getAllProductsSynchronizedToday() {
-        return productRepository.findAllProductsSynchronizedToday();
+        return productRepository.findAllProductsSynchronizedYesterday();
     }
 
     private Product createProductInDb(ProductRequest productRequest) {
