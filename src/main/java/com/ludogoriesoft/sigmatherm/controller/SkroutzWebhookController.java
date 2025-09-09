@@ -148,7 +148,7 @@ public class SkroutzWebhookController {
                     productService.setSync(productId, synchronization);
 
                     // Update Skroutz XML feed for this product
-                    updateSkroutzXmlWithLogging(productId, batchId);
+//                    updateSkroutzXmlWithLogging(productId, batchId);
 
                     successfulItems++;
                     log.info("Successfully processed product {}", productId);
