@@ -31,15 +31,15 @@ public class SyncLog {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private SyncDirection direction; // INBOUND, OUTBOUND
+    private SyncDirection direction;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private SyncOperation operation; // ORDERS, RETURNS, STOCK_UPDATE, FULL_SYNC
+    private SyncOperation operation;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private SyncStatus status; // STARTED, SUCCESS, FAILED, PARTIAL_SUCCESS
+    private SyncStatus status;
 
     @Column(nullable = false)
     private LocalDateTime startTime;
@@ -57,13 +57,13 @@ public class SyncLog {
     private Integer itemsFailed = 0;
 
     @Column(columnDefinition = "TEXT")
-    private String details; // JSON or descriptive text
+    private String details;
 
     @Column(columnDefinition = "TEXT")
     private String errorMessage;
 
     @Column
-    private String batchId; // For grouping related operations
+    private String batchId;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "synchronization_id")

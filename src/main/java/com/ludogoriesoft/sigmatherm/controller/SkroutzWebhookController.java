@@ -133,7 +133,7 @@ public class SkroutzWebhookController {
             log.info("Processing {} line items for {} order {}", totalItems, state, orderCode);
 
             for (SkroutzOrderWebhook.LineItem line : lineItems) {
-                String productId = line.getId();
+                String productId = line.getNpm();
                 int quantity = line.getQuantity();
                 String productName = line.getProduct_name();
 

@@ -28,5 +28,6 @@ public class SkroutzOrderWebhook {
         private String product_name;
         private int quantity;
         private BigDecimal unit_price;
+        private String npm;
     }
 }
