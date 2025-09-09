@@ -27,7 +27,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.io.File;
 import java.util.List;
-import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -133,7 +132,7 @@ public class SkroutzWebhookController {
             log.info("Processing {} line items for {} order {}", totalItems, state, orderCode);
 
             for (SkroutzOrderWebhook.LineItem line : lineItems) {
-                String productId = line.getNpm();
+                String productId = line.getMpn();
                 int quantity = line.getQuantity();
                 String productName = line.getProduct_name();
 
