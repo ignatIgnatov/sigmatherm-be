@@ -323,14 +323,13 @@ public class EmagService {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_TIME_PATTERN);
 
         String createdAfter = startTime.format(formatter);
-        if (lastSync != null) {
-            createdAfter =
-                    lastSync
-                            .getWriteDate()
-                            .atZone(ZoneId.systemDefault())
-                            .withZoneSameInstant(zone)
-                            .toLocalDateTime()
-                            .format(formatter);
+        if (lastSync != null && lastSync.getWriteDate() != null) {
+            createdAfter = lastSync
+                    .getWriteDate()
+                    .atZone(ZoneId.systemDefault())
+                    .withZoneSameInstant(zone)
+                    .toLocalDateTime()
+                    .format(formatter);
         }
         String createdBefore = endTime.format(formatter);
 
@@ -353,14 +352,13 @@ public class EmagService {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_TIME_PATTERN);
 
         String createdAfter = startTime.format(formatter);
-        if (lastSync != null) {
-            createdAfter =
-                    lastSync
-                            .getWriteDate()
-                            .atZone(ZoneId.systemDefault())
-                            .withZoneSameInstant(zone)
-                            .toLocalDateTime()
-                            .format(formatter);
+        if (lastSync != null && lastSync.getWriteDate() != null) {
+            createdAfter = lastSync
+                    .getWriteDate()
+                    .atZone(ZoneId.systemDefault())
+                    .withZoneSameInstant(zone)
+                    .toLocalDateTime()
+                    .format(formatter);
         }
         String createdBefore = endTime.format(formatter);
 

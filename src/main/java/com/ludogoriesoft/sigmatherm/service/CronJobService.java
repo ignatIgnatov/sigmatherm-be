@@ -12,11 +12,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.io.File;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -152,7 +150,7 @@ public class CronJobService {
 
     @Scheduled(cron = "0 40 23 * * *")
     public void updateStockToStores() {
-        List<Product> products = productService.getAllProductsSynchronizedToday();
+        List<Product> products = productService.getAllProductsSynchronizedYesterday();
 
         if (!products.isEmpty()) {
             String batchId = "stock-update-" + System.currentTimeMillis();

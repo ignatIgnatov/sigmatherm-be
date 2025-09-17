@@ -27,7 +27,7 @@ public class MagentoService {
 
     public List<MagentoProductResponseDto> getAllSyncProducts() {
         // Log the outbound operation to provide stock data to Magento
-        List<Product> products = productService.getAllProductsSynchronizedToday();
+        List<Product> products = productService.getAllProductsSynchronizedYesterday();
         List<MagentoProductResponseDto> response = products.stream()
                 .map(this::convertToMagentoProductResponseDto)
                 .toList();

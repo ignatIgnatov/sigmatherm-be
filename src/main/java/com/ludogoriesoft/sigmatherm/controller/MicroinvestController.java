@@ -1,6 +1,7 @@
 package com.ludogoriesoft.sigmatherm.controller;
 
 import com.ludogoriesoft.sigmatherm.dto.microinvest.OperationDto;
+import com.ludogoriesoft.sigmatherm.dto.microinvest.StoreDto;
 import com.ludogoriesoft.sigmatherm.service.MicroinvestService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +45,18 @@ public class MicroinvestController {
     public ResponseEntity<String> createSale(@RequestParam("product_id") String productId, @RequestParam("quantity") Integer quantity) {
         microinvestService.processSaleToMicroinvestApi(productId, quantity);
         return ResponseEntity.ok().body("Sale created successfully!");
+    }
+
+    @GetMapping("/store")
+    public ResponseEntity<List<StoreDto>> getStore() {
+        List<StoreDto> response = microinvestService.fetchAllStoreQuantitiesFromMicroinvestApi();
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/store-debug")
+    public ResponseEntity<String> getStoreDebug() {
+        microinvestService.debugStoreApiFixed();
+        return ResponseEntity.ok("End of debug");
     }
 
 //    @GetMapping("/partners")
