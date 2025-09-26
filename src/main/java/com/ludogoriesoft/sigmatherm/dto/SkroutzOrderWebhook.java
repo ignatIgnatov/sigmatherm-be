@@ -1,7 +1,7 @@
 package com.ludogoriesoft.sigmatherm.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.ludogoriesoft.sigmatherm.entity.enums.EventType;
+import com.ludogoriesoft.sigmatherm.model.enums.EventType;
 import java.math.BigDecimal;
 import java.util.List;
 import lombok.Data;
@@ -14,16 +14,20 @@ public class SkroutzOrderWebhook {
     @Data
     public static class Order {
         private String code;
+        private String state;
         private String created_at;
-        private List<OrderLine> order_lines;
+
+        @JsonProperty("line_items")
+        private List<LineItem> line_items;
     }
 
     @Data
-    public static class OrderLine {
-        @JsonProperty("shop_uid")
-        private String shopUid;
+    public static class LineItem {
+        @JsonProperty("id")
+        private String id;
         private String product_name;
         private int quantity;
         private BigDecimal unit_price;
+        private String mpn;
     }
 }

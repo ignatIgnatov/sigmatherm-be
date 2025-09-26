@@ -1,6 +1,6 @@
-package com.ludogoriesoft.sigmatherm.entity;
+package com.ludogoriesoft.sigmatherm.model;
 
-import com.ludogoriesoft.sigmatherm.entity.enums.Platform;
+import com.ludogoriesoft.sigmatherm.model.enums.Platform;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -25,8 +25,8 @@ public class Synchronization {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    private LocalDateTime startDate;
-    private LocalDateTime endDate;
+    private LocalDateTime readDate;
+    private LocalDateTime writeDate;
 
     @Enumerated(value = EnumType.STRING)
     private Platform platform;

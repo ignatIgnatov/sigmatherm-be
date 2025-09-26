@@ -3,6 +3,7 @@ services:
     image: postgres:15
     container_name: sigmatherm-db
     environment:
+      DATABASE_HOST: database
       POSTGRES_USER: ${DATABASE_USER}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
       POSTGRES_DB: ${DATABASE_NAME}
@@ -21,10 +22,15 @@ services:
     container_name: sigmatherm-be-container
     ports:
       - "8080:8080"
+    environment:
+      - LOCAL_API_URL=http://151.251.206.130:8700
     env_file:
       - .env
     depends_on:
       - database
+    volumes:
+      - ./offers:/app/offers
+      - ./feeds:/app/feeds
     networks:
       - app-network
 

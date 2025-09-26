@@ -19,10 +19,9 @@ public class ProductRequest {
     @NotBlank(message = "Product name is required")
     private String name;
 
-    @NotBlank(message = "Supplier name is required")
     private String supplierName;
-
     private BigDecimal basePrice;
+    private BigDecimal microinvestPrice;
     private int warehouseAvailability;
     private int shopsAvailability;
 }
